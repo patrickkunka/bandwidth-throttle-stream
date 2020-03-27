@@ -189,6 +189,12 @@ class BandwidthThrottle extends Transform {
 
         const elapsedTime = Date.now() - this.lastPushTime;
 
+        console.log(
+            'throttle processing...',
+            elapsedTime,
+            this.pendingBytesQueue.length
+        );
+
         // If the time elapsed is less than the provided interval
         // duration, do nothing.
 
