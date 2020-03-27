@@ -1,14 +1,51 @@
 {
     "name": "bandwidth-throttle-stream",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "",
     "private": true,
     "main": "./dist/index.js",
     "scripts": {
+        "test": "TS_NODE_PROJECT=./tsconfig.json mocha --opts ./config/mocha/mocha.opts",
+        "test:watch": "npm run test -- --watch",
+        "test:cover": "nyc npm run test",
         "build": "tsc -c ./tsconfig.json"
     },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged",
+            "pre-push": "npm run test"
+        }
+    },
+    "lint-staged": {
+        "*.{ts,tsx}": [
+            "prettier --write --config ./config/prettier/.prettierrc",
+            "git add"
+        ],
+        "*.scss": [
+            "prettier --write --config ./config/prettier/.prettierrc",
+            "stylelint --config './config/stylelint/.stylelintrc.json' --fix",
+            "git add"
+        ]
+    },
+    "nyc": {
+        "extends": "./config/nyc/.nycrc.json"
+    },
     "devDependencies": {
-        "typescript": "3.5.3",
-        "@types/node": "12.6.8"
+        "@types/chai": "4.2.2",
+        "@types/mocha": "2.2.48",
+        "@types/node": "12.6.8",
+        "@types/sinon": "7.0.13",
+        "chai": "4.2.0",
+        "husky": "3.0.2",
+        "lint-staged": "9.2.1",
+        "mocha": "6.2.0",
+        "nyc": "^15.0.0",
+        "prettier": "1.19.1",
+        "sinon": "7.4.2",
+        "ts-node": "8.3.0",
+        "tsc-watch": "2.4.0",
+        "tslint": "5.20.1",
+        "tslint-eslint-rules": "5.4.0",
+        "typescript": "3.7.4"
     }
 }

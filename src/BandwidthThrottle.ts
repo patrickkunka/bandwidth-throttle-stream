@@ -78,7 +78,7 @@ class BandwidthThrottle extends Transform {
      * invoked internally whenever data is received from the underlying
      * writeable stream.
      *
-     * @param chunk A chunk of data in the form of a buffer of arbitary length.
+     * @param chunk A chunk of data in the form of a buffer of arbitrary length.
      * @param _ The type of encoding (not used)
      * @param done A callback to be invoked once the incoming data has been processed.
      */
@@ -104,7 +104,7 @@ class BandwidthThrottle extends Transform {
             this.pendingBytesQueue.length >=
             this.options.bytesPerInterval * 2
         ) {
-            // If the queue contains has more chunks than can be processed
+            // If the queue contains more chunks than can be processed
             // in a single interval, let it clear before signalling that
             // additional input can be received.
 
@@ -121,7 +121,7 @@ class BandwidthThrottle extends Transform {
      * invoked internally when the final piece of data has been received
      * by the underlying writable stream.
      *
-     * @param done A callback to be done once all data has been pushed
+     * @param done A callback to be invoked once all data has been pushed
      *  to the underlying readable stream.
      */
 

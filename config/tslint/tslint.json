@@ -1,0 +1,49 @@
+{
+    "defaultSeverity": "error",
+    "extends": [
+        "tslint:recommended",
+        "tslint-eslint-rules"
+    ],
+    "rules": {
+        "arrow-parens": false,
+        "curly": false,
+        "eofline": false,
+        "forin": false,
+        "import-spacing": false,
+        "max-line-length": [true, {"limit": 120, "ignore-pattern": "^import |^export {(.*?)}"}],
+        "member-ordering": [true, {
+            "order": [
+                "public-instance-field",
+                "protected-instance-field",
+                "private-instance-field",
+                "public-static-field",
+                "protected-static-field",
+                "private-static-field",
+                "constructor",
+                "public-instance-method",
+                "protected-instance-method",
+                "private-instance-method",
+                "public-static-method",
+                "protected-static-method",
+                "private-static-method"
+            ]
+        }],
+        "member-access": [true, "check-accessor"],
+        "newline-before-return": true,
+        "no-conditional-assignment": false,
+        "no-console": [true, "log"],
+        "object-curly-spacing": [true, "never"],
+        "object-literal-sort-keys": false,
+        "ordered-imports": [true, {
+            "grouped-imports": true
+        }],
+        "quotemark": [true, "single", "jsx-double"],
+        "object-literal-key-quotes": [true, "as-needed"],
+        "semicolon": [false, "always"],
+        "radix": false,
+        "trailing-comma": [true, {"multiline": "never", "singleline": "never"}],
+        "typedef": [true, "call-signature"],
+        "typedef-whitespace": false,
+        "whitespace": [true, {"ignore-pattern": "??"}]
+    }
+}

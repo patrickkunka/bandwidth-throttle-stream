@@ -1,0 +1,27 @@
+{
+    "reporter": [
+        "lcov",
+        "text"
+    ],
+    "extension": [
+        ".ts",
+        ".tsx"
+    ],
+    "exclude": [
+        "config",
+        "dist",
+        "coverage",
+        "**/index.ts",
+        "**/Interfaces",
+        "**/Constants",
+        "**/Types",
+        "**/*.d.ts",
+        "**/*.test.ts",
+        "**/*.mock.ts"
+    ],
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "check-coverage": true
+}
