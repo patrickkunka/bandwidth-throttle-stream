@@ -30,7 +30,7 @@ class BandwidthThrottleGroup {
     // and client estimation, which is consistent with a results produced by a
     // native implementation such as Charles Proxy or Chrome Dev Tools.
 
-    private static UNDERPERFORMANCE_OFFSET_FACTOR = 1.03;
+    private static UNDERPERFORMANCE_OFFSET_FACTOR = 1.0;
 
     /**
      * @param options Consumer-provided options defining the

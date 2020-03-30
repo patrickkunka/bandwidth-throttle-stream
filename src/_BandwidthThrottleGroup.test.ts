@@ -2,6 +2,7 @@ import {stub, SinonStub, useFakeTimers, SinonFakeTimers} from 'sinon';
 import {Readable, Writable} from 'stream';
 import {assert} from 'chai';
 import BandwidthThrottleGroup from './BandwidthThrottleGroup';
+import Callback from './Types/Callback';
 
 const ONE_KB = 1000;
 const ONE_MB = 1000000;
@@ -10,7 +11,7 @@ const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));
 
 interface ITestContext {
-    outputStub: SinonStub<[Buffer]>;
+    outputStub: SinonStub<[Buffer, string, Callback]>;
     inputStream: Readable;
     outputStream: Writable;
     clock: SinonFakeTimers;
@@ -39,11 +40,17 @@ const testCases: ITestCase[] = [
     }
 ];
 
+const asyncIterator = {
+    [Symbol.asyncIterator]: () => ({
+        next: async () => ({done: false, value: null})
+    })
+};
+
 describe.only('BandwidthThrottleGroup', () => {
     let context: ITestContext;
 
     beforeEach(() => {
-        const outputStub = stub<[Buffer]>();
+        const outputStub = stub<[Buffer, string, Callback]>();
 
         context = {
             clock: useFakeTimers(),
@@ -66,9 +73,9 @@ describe.only('BandwidthThrottleGroup', () => {
             let totalBytesProcessed = 0;
             let virtualTestDuration = 0;
 
-            context.outputStub.callsFake(chunk => {
-                console.log('processed', chunk.length);
+            context.outputStub.callsFake((chunk, _, done) => {
                 totalBytesProcessed += chunk.length;
+                done();
             });
 
             context.inputStream.pipe(throttle).pipe(context.outputStream);
@@ -77,24 +84,12 @@ describe.only('BandwidthThrottleGroup', () => {
 
             context.inputStream.push(dataIn);
 
-            const iterator = {
-                [Symbol.asyncIterator]: () => ({
-                    next: async () => ({done: false, value: null})
-                })
-            };
-
-            for await (const _ of iterator) {
-                console.log(
-                    `${totalBytesProcessed}/${testCase.bytesToProcess} at ${virtualTestDuration}ms`
-                );
-
+            for await (const _ of asyncIterator) {
                 if (totalBytesProcessed >= testCase.bytesToProcess) break;
 
-                const TICK_DURATION_MS = 10;
+                const TICK_DURATION_MS = 100;
 
                 context.clock.tick(TICK_DURATION_MS);
-
-                await Promise.resolve();
 
                 virtualTestDuration += TICK_DURATION_MS;
             }
