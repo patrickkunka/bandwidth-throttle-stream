@@ -112,7 +112,7 @@ const handleTestCase = async (testCase: IThrottleTestCase) => {
     const initialBytesPerInterval = bytesPerInterval[0];
 
     const throttleGroup = new BandwidthThrottleGroup({
-        bytesPerInterval: initialBytesPerInterval,
+        bytesPerSecond: initialBytesPerInterval,
         intervalDurationMs
     });
 
@@ -195,7 +195,7 @@ const testIndividualThrottle = async (
 describe('BandwidthThrottleGroup', () => {
     it('should fallback to a default of a 1 second interval if not provided', () => {
         const throttleGroup = new BandwidthThrottleGroup({
-            bytesPerInterval: 22
+            bytesPerSecond: 22
         });
 
         assert.equal(throttleGroup.options.intervalDurationMs, 1000);
@@ -203,11 +203,11 @@ describe('BandwidthThrottleGroup', () => {
 
     it('should take all configuration options provided', () => {
         const throttleGroup = new BandwidthThrottleGroup({
-            bytesPerInterval: 22,
+            bytesPerSecond: 22,
             intervalDurationMs: 100
         });
 
-        assert.equal(throttleGroup.options.bytesPerInterval, 22);
+        assert.equal(throttleGroup.options.bytesPerSecond, 22);
         assert.equal(throttleGroup.options.intervalDurationMs, 100);
     });
 
@@ -216,7 +216,7 @@ describe('BandwidthThrottleGroup', () => {
             'that they cannot be reused',
         async () => {
             const throttleGroup = new BandwidthThrottleGroup({
-                bytesPerInterval: Infinity,
+                bytesPerSecond: Infinity,
                 intervalDurationMs: 100
             });
 

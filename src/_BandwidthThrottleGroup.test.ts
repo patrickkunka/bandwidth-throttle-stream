@@ -4,9 +4,6 @@ import {assert} from 'chai';
 import BandwidthThrottleGroup from './BandwidthThrottleGroup';
 import Callback from './Types/Callback';
 
-const ONE_KB = 1000;
-const ONE_MB = 1000000;
-
 const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));
 
@@ -21,7 +18,7 @@ interface ITestCase {
     it: string;
     bytesToProcess: number;
     bytesPerSecond: number;
-    expectedCompletionDurationMs: number;
+    expectedCompletionDurationSeconds: number;
 }
 
 const testCases: ITestCase[] = [
@@ -30,23 +27,17 @@ const testCases: ITestCase[] = [
             'it processes all data by the next tick, with no throttling applied',
         bytesToProcess: 100,
         bytesPerSecond: Infinity,
-        expectedCompletionDurationMs: 1000 // todo - rethink "interval duration", should be `0`
+        expectedCompletionDurationSeconds: 0
     },
     {
-        it: 'it throttles',
-        bytesToProcess: ONE_MB,
-        bytesPerSecond: ONE_KB,
-        expectedCompletionDurationMs: 1000 * 1000
+        it: 'completes processing of throttled data in the expected time',
+        bytesToProcess: 500,
+        bytesPerSecond: 50,
+        expectedCompletionDurationSeconds: 10
     }
 ];
 
-const asyncIterator = {
-    [Symbol.asyncIterator]: () => ({
-        next: async () => ({done: false, value: null})
-    })
-};
-
-describe.only('BandwidthThrottleGroup', () => {
+describe('BandwidthThrottleGroup', () => {
     let context: ITestContext;
 
     beforeEach(() => {
@@ -65,7 +56,7 @@ describe.only('BandwidthThrottleGroup', () => {
     testCases.forEach(testCase => {
         it(testCase.it, async () => {
             const throttleGroup = new BandwidthThrottleGroup({
-                bytesPerInterval: testCase.bytesPerSecond
+                bytesPerSecond: testCase.bytesPerSecond
             });
 
             const throttle = throttleGroup.createBandwidthThrottle();
@@ -75,7 +66,15 @@ describe.only('BandwidthThrottleGroup', () => {
 
             context.outputStub.callsFake((chunk, _, done) => {
                 totalBytesProcessed += chunk.length;
+
                 done();
+
+                if (totalBytesProcessed < testCase.bytesToProcess) return;
+
+                assert.equal(
+                    virtualTestDuration / 1000,
+                    testCase.expectedCompletionDurationSeconds
+                );
             });
 
             context.inputStream.pipe(throttle).pipe(context.outputStream);
@@ -84,8 +83,8 @@ describe.only('BandwidthThrottleGroup', () => {
 
             context.inputStream.push(dataIn);
 
-            for await (const _ of asyncIterator) {
-                if (totalBytesProcessed >= testCase.bytesToProcess) break;
+            while (totalBytesProcessed < testCase.bytesToProcess) {
+                await Promise.resolve();
 
                 const TICK_DURATION_MS = 100;
 
@@ -93,11 +92,6 @@ describe.only('BandwidthThrottleGroup', () => {
 
                 virtualTestDuration += TICK_DURATION_MS;
             }
-
-            assert.equal(
-                virtualTestDuration,
-                testCase.expectedCompletionDurationMs
-            );
         });
     });
 });

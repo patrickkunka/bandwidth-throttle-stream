@@ -14,10 +14,10 @@ import ICurrentBandwidthThrottleOptions from './Interfaces/ICurrentBandwidthThro
  */
 
 class BandwidthThrottleGroup {
-    private bytesPerInterval!: number;
-    private intervalDurationMs: number = 1000;
+    private bytesPerSecond!: number;
     private inFlightRequests: number = 0;
     private bandwidthThrottles: BandwidthThrottle[] = [];
+    private resolutionHz: number = 40;
 
     // NB: While the functionality herein throttles at a predicable constant rate,
     // the estimate that the client observes for any given throughput bandwidth
@@ -54,17 +54,22 @@ class BandwidthThrottleGroup {
         const self = this;
 
         return {
-            get bytesPerInterval(): number {
-                return self.bytesPerInterval;
+            get bytesPerSecond(): number {
+                return self.bytesPerSecond;
             },
-            get intervalDurationMs(): number {
-                return self.intervalDurationMs;
-            },
-            get bytesPerIntervalPerRequest(): number {
+            get bytesPerTickPerRequest(): number {
                 return (
-                    (self.bytesPerInterval / self.inFlightRequests) *
+                    (self.bytesPerSecond /
+                        self.resolutionHz /
+                        self.inFlightRequests) *
                     BandwidthThrottleGroup.UNDERPERFORMANCE_OFFSET_FACTOR
                 );
+            },
+            get tickDurationMs(): number {
+                return 1000 / self.resolutionHz;
+            },
+            get resolutionHz(): number {
+                return self.resolutionHz;
             }
         };
     }
@@ -76,7 +81,7 @@ class BandwidthThrottleGroup {
      */
 
     public setBytesPerInterval(bytesPerInterval: number): void {
-        this.bytesPerInterval = bytesPerInterval;
+        this.bytesPerSecond = bytesPerInterval;
     }
 
     /**

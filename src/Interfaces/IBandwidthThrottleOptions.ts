@@ -4,7 +4,7 @@ interface IBandwidthThrottleOptions {
      * throttle, per the defined interval.
      */
 
-    bytesPerInterval: number;
+    bytesPerSecond: number;
 
     /**
      * An interval in ms, defining the frequency at which we apply

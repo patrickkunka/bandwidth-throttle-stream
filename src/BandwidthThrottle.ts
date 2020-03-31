@@ -27,6 +27,7 @@ class BandwidthThrottle extends Transform {
 
     private intervalId: NodeJS.Timeout;
     private lastPushTime = -1;
+    private tickIndex = -1;
     private pendingBytesQueue: number[] = [];
     private options: ICurrentBandwidthThrottleOptions;
     private isInFlight: boolean = false;
@@ -100,15 +101,24 @@ class BandwidthThrottle extends Transform {
             this.pendingBytesQueue.push(byte);
         }
 
+        // If no throttling is applied, avoid any initial latency by immediately
+        // processing the queue on the next frame.
+
+        if (this.options.bytesPerSecond === Infinity) {
+            this.processQueuedBytes(done);
+
+            return;
+        }
+
         if (
             this.pendingBytesQueue.length >=
-            this.options.bytesPerInterval * 2
+            this.options.bytesPerTickPerRequest * 2
         ) {
             // If the queue contains more chunks than can be processed
             // in a single interval, let it clear before signalling that
             // additional input can be received.
 
-            setTimeout(done, this.options.intervalDurationMs);
+            setTimeout(done, this.options.tickDurationMs);
 
             return;
         }
@@ -167,19 +177,13 @@ class BandwidthThrottle extends Transform {
      */
 
     private createBytesProcessingInterval(done?: Callback): NodeJS.Timeout {
-        // If no throttling is applied, avoid any initial latency by immediately
-        // processing the queue on the next frame.
-
-        if (this.options.bytesPerInterval === Infinity)
-            setTimeout(this.processQueuedBytes.bind(this, done), 0);
-
         return setInterval(
             () => this.processQueuedBytes(done),
             // NB: We iterate at a rate 10x faster than interval provided.
             // This ensures greater accuracy of throttling and forces the
             // throttling to stay in sync, should the JavaScript timer become
             // delayed due to other thread-blocking processes.
-            this.options.intervalDurationMs / 10
+            this.options.tickDurationMs / 10
         );
     }
 
@@ -192,21 +196,32 @@ class BandwidthThrottle extends Transform {
         // If the time elapsed is less than the provided interval
         // duration, do nothing.
 
-        if (elapsedTime < this.options.intervalDurationMs) return;
+        if (
+            this.options.bytesPerSecond !== Infinity &&
+            elapsedTime < this.options.tickDurationMs
+        )
+            return;
 
         // If there are chunks waiting in the queue, collect the
-        // amount bytes specified, and push them to the readable
+        // amount of bytes specified, and push them to the readable
         // stream
 
+        if (this.tickIndex === this.options.resolutionHz) {
+            this.tickIndex = -1;
+        }
+
+        this.tickIndex++;
+
         if (this.pendingBytesQueue.length > 0) {
+            // TODO: figure out how to best distribute
+            // bytes between ticks in a regular pattern
+
             const bytesToPush = Buffer.from(
                 this.pendingBytesQueue.splice(
                     0,
-                    this.options.bytesPerIntervalPerRequest
+                    Math.ceil(this.options.bytesPerTickPerRequest)
                 )
             );
-
-            // console.log(`[BandwidthThrottle] Time since last data push ${elapsedTime}`);
 
             this.push(bytesToPush);
 
