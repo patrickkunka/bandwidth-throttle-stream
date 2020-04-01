@@ -5,6 +5,7 @@ interface ICurrentBandwidthThrottleOptions extends IBandwidthThrottleOptions {
     readonly bytesPerTickPerRequest: number;
     readonly tickDurationMs: number;
     readonly resolutionHz: number;
+    readonly getBytesForTickAtIndex: (index: number) => number;
 }
 
 export default ICurrentBandwidthThrottleOptions;

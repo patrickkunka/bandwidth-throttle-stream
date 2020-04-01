@@ -1,6 +1,7 @@
 import BandwidthThrottle from './BandwidthThrottle';
 import IBandwidthThrottleOptions from './Interfaces/IBandwidthThrottleOptions';
 import ICurrentBandwidthThrottleOptions from './Interfaces/ICurrentBandwidthThrottleOptions';
+import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
 
 /**
  * A class used to configure and bridge between one or more
@@ -14,7 +15,7 @@ import ICurrentBandwidthThrottleOptions from './Interfaces/ICurrentBandwidthThro
  */
 
 class BandwidthThrottleGroup {
-    private bytesPerSecond!: number;
+    private bytesPerSecond: number = Infinity;
     private inFlightRequests: number = 0;
     private bandwidthThrottles: BandwidthThrottle[] = [];
     private resolutionHz: number = 40;
@@ -37,7 +38,7 @@ class BandwidthThrottleGroup {
      *  throttling behaviour.
      */
 
-    constructor(options: IBandwidthThrottleOptions) {
+    constructor(options: IBandwidthThrottleOptions = {}) {
         Object.assign(this, options);
 
         this.handleRequestEnd = this.handleRequestEnd.bind(this);
@@ -70,7 +71,13 @@ class BandwidthThrottleGroup {
             },
             get resolutionHz(): number {
                 return self.resolutionHz;
-            }
+            },
+            getBytesForTickAtIndex: (index: number) =>
+                getPartitionedIntegerPartAtIndex(
+                    self.bytesPerSecond,
+                    self.resolutionHz,
+                    index
+                )
         };
     }
 

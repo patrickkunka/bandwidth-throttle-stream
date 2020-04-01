@@ -1,4 +1,4 @@
-import partitionInteger from './partitionInteger';
+import getPartitionedIntegerPartAtIndex from './getPartitionedIntegerPartAtIndex';
 import {assert} from 'chai';
 
 interface ITestCase {
@@ -81,17 +81,22 @@ const testCases: ITestCase[] = [
     }
 ];
 
-describe.only('partitionInteger()', () => {
+describe.only('getPartitionedIntegerPartAtIndex()', () => {
     testCases.forEach((testCase, i) => {
         it(`should pass test case ${i}`, () => {
-            const output = partitionInteger(
-                testCase.value,
-                testCase.partsCount
-            );
-            const sum = output.reduce((sum, item) => sum + item, 0);
+            const sum = testCase.expected.reduce(((sumUnderConstruction, expectedPart, i) => {
+                const part = getPartitionedIntegerPartAtIndex(
+                    testCase.value,
+                    testCase.partsCount,
+                    i
+                );
+
+                assert.equal(part, expectedPart);
+
+                return part + sumUnderConstruction;
+            }));
 
             assert.equal(sum, testCase.value);
-            assert.deepEqual(output, testCase.expected);
         });
     });
 });

@@ -141,6 +141,14 @@ class BandwidthThrottle extends Transform {
 
         clearInterval(this.intervalId);
 
+        if (this.options.bytesPerSecond === Infinity) {
+            this.handleRequestEnd(this);
+
+            done();
+
+            return;
+        }
+
         this.intervalId = this.createBytesProcessingInterval(() => {
             this.handleRequestEnd(this);
 
@@ -179,11 +187,11 @@ class BandwidthThrottle extends Transform {
     private createBytesProcessingInterval(done?: Callback): NodeJS.Timeout {
         return setInterval(
             () => this.processQueuedBytes(done),
-            // NB: We iterate at a rate 10x faster than interval provided.
+            // NB: We iterate at a rate 5x faster than the desired tick duration.
             // This ensures greater accuracy of throttling and forces the
             // throttling to stay in sync, should the JavaScript timer become
             // delayed due to other thread-blocking processes.
-            this.options.tickDurationMs / 10
+            this.options.tickDurationMs / 5
         );
     }
 
@@ -206,21 +214,20 @@ class BandwidthThrottle extends Transform {
         // amount of bytes specified, and push them to the readable
         // stream
 
-        if (this.tickIndex === this.options.resolutionHz) {
+        if (this.tickIndex === this.options.resolutionHz - 1) {
             this.tickIndex = -1;
         }
 
         this.tickIndex++;
 
         if (this.pendingBytesQueue.length > 0) {
-            // TODO: figure out how to best distribute
-            // bytes between ticks in a regular pattern
+            // TODO: ensure this is evenly divided between active requests
+            const bytesForTickIndex = this.options.getBytesForTickAtIndex(
+                this.tickIndex
+            );
 
             const bytesToPush = Buffer.from(
-                this.pendingBytesQueue.splice(
-                    0,
-                    Math.ceil(this.options.bytesPerTickPerRequest)
-                )
+                this.pendingBytesQueue.splice(0, bytesForTickIndex)
             );
 
             this.push(bytesToPush);
@@ -232,7 +239,7 @@ class BandwidthThrottle extends Transform {
 
             this.lastPushTime += elapsedTime;
 
-            return;
+            if (this.pendingBytesQueue.length > 0) return;
         }
 
         // Else, queue is empty, stop the interval
