@@ -1,6 +1,5 @@
 import BandwidthThrottle from './BandwidthThrottle';
 import IBandwidthThrottleOptions from './Interfaces/IBandwidthThrottleOptions';
-import ICurrentBandwidthThrottleOptions from './Interfaces/ICurrentBandwidthThrottleOptions';
 import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
 
 /**
@@ -19,19 +18,9 @@ class BandwidthThrottleGroup {
     private inFlightRequests: number = 0;
     private bandwidthThrottles: BandwidthThrottle[] = [];
     private resolutionHz: number = 40;
-
-    // NB: While the functionality herein throttles at a predicable constant rate,
-    // the estimate that the client observes for any given throughput bandwidth
-    // is about 95% less than what the proxy is told to produce. We assume this
-    // can be attributed to inherent performance overhead of a JS, event-loop based
-    // approach.
-
-    // To overcome this, we instruct the proxy to pump through 3% more data than is
-    // requested which results in an almost exact match between proxy configuration
-    // and client estimation, which is consistent with a results produced by a
-    // native implementation such as Charles Proxy or Chrome Dev Tools.
-
-    private static UNDERPERFORMANCE_OFFSET_FACTOR = 1.0;
+    private clockIntervalId: NodeJS.Timeout | null = null;
+    private lastTickTime: number = -1;
+    private tickIndex: number = -1;
 
     /**
      * @param options Consumer-provided options defining the
@@ -43,6 +32,7 @@ class BandwidthThrottleGroup {
 
         this.handleRequestEnd = this.handleRequestEnd.bind(this);
         this.handleRequestStart = this.handleRequestStart.bind(this);
+        this.processOpenRequests = this.processOpenRequests.bind(this);
     }
 
     /**
@@ -51,44 +41,30 @@ class BandwidthThrottleGroup {
      * latest configuration values at all times.
      */
 
-    public get options(): ICurrentBandwidthThrottleOptions {
+    public get options(): IBandwidthThrottleOptions {
         const self = this;
 
         return {
-            get bytesPerSecond(): number {
+            get bytesPerSecond() {
                 return self.bytesPerSecond;
-            },
-            get bytesPerTickPerRequest(): number {
-                return (
-                    (self.bytesPerSecond /
-                        self.resolutionHz /
-                        self.inFlightRequests) *
-                    BandwidthThrottleGroup.UNDERPERFORMANCE_OFFSET_FACTOR
-                );
-            },
-            get tickDurationMs(): number {
-                return 1000 / self.resolutionHz;
-            },
-            get resolutionHz(): number {
-                return self.resolutionHz;
-            },
-            getBytesForTickAtIndex: (index: number) =>
-                getPartitionedIntegerPartAtIndex(
-                    self.bytesPerSecond,
-                    self.resolutionHz,
-                    index
-                )
+            }
         };
     }
 
-    /**
-     * Updates the group's `bytesPerInterval` value, such that the amount
-     * of throttling can be increased or decreased at any time, even while
-     * a request is in flight.
-     */
+    private get tickDurationMs(): number {
+        return 1000 / this.resolutionHz;
+    }
 
-    public setBytesPerInterval(bytesPerInterval: number): void {
-        this.bytesPerSecond = bytesPerInterval;
+    private getBytesForTickAtIndex(index: number): number {
+        return getPartitionedIntegerPartAtIndex(
+            this.bytesPerSecond,
+            this.resolutionHz,
+            index
+        );
+    }
+
+    public configire(options: IBandwidthThrottleOptions): void {
+        Object.assign(this, options);
     }
 
     /**
@@ -130,6 +106,10 @@ class BandwidthThrottleGroup {
 
     private handleRequestStart(): void {
         this.inFlightRequests++;
+
+        if (this.clockIntervalId) return;
+
+        this.clockIntervalId = this.startClock();
     }
 
     /**
@@ -148,6 +128,71 @@ class BandwidthThrottleGroup {
         bandwidthThrottle.destroy();
 
         this.bandwidthThrottles.splice(index, 1);
+
+        if (this.inFlightRequests === 0) this.stopClock();
+    }
+
+    private startClock(): NodeJS.Timeout {
+        // NB: We iterate at a rate 5x faster than the desired tick duration.
+        // This ensures greater accuracy of throttling and forces the
+        // throttling to stay in sync, should the JavaScript timer become
+        // delayed due to other thread-blocking processes.
+
+        return setInterval(this.processOpenRequests, this.tickDurationMs / 5);
+    }
+
+    private stopClock(): void {
+        if (!this.clockIntervalId) return;
+
+        clearInterval(this.clockIntervalId);
+
+        this.clockIntervalId = null;
+    }
+
+    private processOpenRequests(): void {
+        // Record the time since data was last passed to the
+        // readable stream
+
+        const elapsedTime = Date.now() - this.lastTickTime;
+
+        // If the time elapsed is less than the provided interval
+        // duration, do nothing.
+
+        if (
+            this.bytesPerSecond !== Infinity &&
+            elapsedTime < this.tickDurationMs
+        )
+            return;
+
+        // Increment the tick index, or reset it to 0 whenever it surpasses
+        // the desired resolution
+
+        if (this.tickIndex === this.resolutionHz - 1) {
+            this.tickIndex = -1;
+        }
+
+        this.tickIndex++;
+
+        // Determine the total amounts of bytes that can be pushed on this tick,
+        // across all active requests
+
+        const bytesForTickIndex = this.getBytesForTickAtIndex(this.tickIndex);
+
+        // Spread those bytes evenly across all active requests
+
+        this.bandwidthThrottles.forEach((throttle, index) => {
+            const bytesForTickPerRequest = getPartitionedIntegerPartAtIndex(
+                bytesForTickIndex,
+                this.bandwidthThrottles.length,
+                index
+            );
+
+            throttle.process(bytesForTickPerRequest);
+        });
+
+        // Increment the last push time, and return
+
+        this.lastTickTime += elapsedTime;
     }
 }
 

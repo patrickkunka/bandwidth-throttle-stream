@@ -1,8 +1,8 @@
 import {Transform} from 'stream';
 
-import ICurrentBandwidthThrottleOptions from './Interfaces/ICurrentBandwidthThrottleOptions';
 import Callback from './Types/Callback';
 import RequestEndCallback from './Types/RequestEndCallback';
+import IBandwidthThrottleOptions from './Interfaces/IBandwidthThrottleOptions';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in
@@ -25,14 +25,13 @@ class BandwidthThrottle extends Transform {
     public onBytesWritten: Callback | null = null;
     public id = '';
 
-    private intervalId: NodeJS.Timeout;
-    private lastPushTime = -1;
-    private tickIndex = -1;
     private pendingBytesQueue: number[] = [];
-    private options: ICurrentBandwidthThrottleOptions;
+    private options: Readonly<IBandwidthThrottleOptions>;
     private isInFlight: boolean = false;
     private handleRequestStart: Callback;
     private handleRequestEnd: RequestEndCallback;
+    private transformCallback: Callback | null = null;
+    private flushCallback: Callback | null = null;
 
     constructor(
         /**
@@ -40,7 +39,7 @@ class BandwidthThrottle extends Transform {
          * parent group.
          */
 
-        options: ICurrentBandwidthThrottleOptions,
+        options: Readonly<IBandwidthThrottleOptions>,
 
         /**
          * A handler to be invoked whenever a request starts, so that
@@ -70,8 +69,6 @@ class BandwidthThrottle extends Transform {
         this.handleRequestStart = handleRequestStart;
         this.handleRequestEnd = handleRequestEnd;
         this.id = id;
-
-        this.intervalId = this.createBytesProcessingInterval();
     }
 
     /**
@@ -105,25 +102,14 @@ class BandwidthThrottle extends Transform {
         // processing the queue on the next frame.
 
         if (this.options.bytesPerSecond === Infinity) {
-            this.processQueuedBytes(done);
+            this.process();
+
+            done();
 
             return;
         }
 
-        if (
-            this.pendingBytesQueue.length >=
-            this.options.bytesPerTickPerRequest * 2
-        ) {
-            // If the queue contains more chunks than can be processed
-            // in a single interval, let it clear before signalling that
-            // additional input can be received.
-
-            setTimeout(done, this.options.tickDurationMs);
-
-            return;
-        }
-
-        done();
+        this.transformCallback = done;
     }
 
     /**
@@ -136,11 +122,6 @@ class BandwidthThrottle extends Transform {
      */
 
     public _flush(done: Callback): void {
-        // Data has been written, re-run the interval until all queued chunks have
-        // been pushed, then call `done()`
-
-        clearInterval(this.intervalId);
-
         if (this.options.bytesPerSecond === Infinity) {
             this.handleRequestEnd(this);
 
@@ -149,20 +130,9 @@ class BandwidthThrottle extends Transform {
             return;
         }
 
-        this.intervalId = this.createBytesProcessingInterval(() => {
-            this.handleRequestEnd(this);
+        // Else, wait until all pending data processed then call flush done
 
-            done();
-        });
-    }
-
-    /**
-     * Ensures any running intervals are terminated so that the
-     * instance can be garbage collected.
-     */
-
-    public destroy(): void {
-        clearInterval(this.intervalId);
+        this.flushCallback = done;
     }
 
     /**
@@ -174,81 +144,34 @@ class BandwidthThrottle extends Transform {
         this.handleRequestEnd(this);
     }
 
-    /**
-     * Creates an interval at the defined duration, used to monitor
-     * throughput (via the pending bytes queue) and ensure only the maximum
-     * defined amount of data is pushed to the underlying readable stream once
-     * per iteration.
-     *
-     * @param done A callback to invoked once all data has been processed
-     *  and the queue is empty.
-     */
-
-    private createBytesProcessingInterval(done?: Callback): NodeJS.Timeout {
-        return setInterval(
-            () => this.processQueuedBytes(done),
-            // NB: We iterate at a rate 5x faster than the desired tick duration.
-            // This ensures greater accuracy of throttling and forces the
-            // throttling to stay in sync, should the JavaScript timer become
-            // delayed due to other thread-blocking processes.
-            this.options.tickDurationMs / 5
+    public process(maxBytesToProcess: number = Infinity): void {
+        const bytesToPush = Buffer.from(
+            this.pendingBytesQueue.splice(0, maxBytesToProcess)
         );
-    }
 
-    private processQueuedBytes(done?: Callback): void {
-        // Record the time since data was last passed to the
-        // readable stream
+        this.push(bytesToPush);
 
-        const elapsedTime = Date.now() - this.lastPushTime;
+        if (typeof this.onBytesWritten === 'function') this.onBytesWritten();
 
-        // If the time elapsed is less than the provided interval
-        // duration, do nothing.
+        // If there is more data to be processed, stop here
 
-        if (
-            this.options.bytesPerSecond !== Infinity &&
-            elapsedTime < this.options.tickDurationMs
-        )
+        if (this.pendingBytesQueue.length > 0 || !this.transformCallback)
             return;
 
-        // If there are chunks waiting in the queue, collect the
-        // amount of bytes specified, and push them to the readable
-        // stream
+        // If a `transform` callback has been provided, call it
 
-        if (this.tickIndex === this.options.resolutionHz - 1) {
-            this.tickIndex = -1;
-        }
+        this.transformCallback();
 
-        this.tickIndex++;
+        this.transformCallback = null;
 
-        if (this.pendingBytesQueue.length > 0) {
-            // TODO: ensure this is evenly divided between active requests
-            const bytesForTickIndex = this.options.getBytesForTickAtIndex(
-                this.tickIndex
-            );
+        if (!this.flushCallback) return;
 
-            const bytesToPush = Buffer.from(
-                this.pendingBytesQueue.splice(0, bytesForTickIndex)
-            );
+        // If the writing of data has ended and flush has already been
+        // called, invoke the flush callback and signal request end
 
-            this.push(bytesToPush);
+        this.flushCallback();
 
-            if (typeof this.onBytesWritten === 'function')
-                this.onBytesWritten();
-
-            // Increment the last push time, and return
-
-            this.lastPushTime += elapsedTime;
-
-            if (this.pendingBytesQueue.length > 0) return;
-        }
-
-        // Else, queue is empty, stop the interval
-
-        clearInterval(this.intervalId);
-
-        // If a `done` callback has been provided, call it
-
-        if (done) done();
+        this.handleRequestEnd(this);
     }
 }
 

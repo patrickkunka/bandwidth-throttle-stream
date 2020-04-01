@@ -5,14 +5,6 @@ interface IBandwidthThrottleOptions {
      */
 
     bytesPerSecond?: number;
-
-    /**
-     * An interval in ms, defining the frequency at which we apply
-     * throttling to incoming data. A higher frequency will yield a
-     * higher accuracy of throttling on smaller or sporadic requests.
-     */
-
-    intervalDurationMs?: number;
 }
 
 export default IBandwidthThrottleOptions;

@@ -39,7 +39,7 @@ const testCases: ITestCase[] = [
 
 const TEST_RUNNER_TICK_DURATION = 100;
 
-describe.only('BandwidthThrottleGroup', () => {
+describe('BandwidthThrottleGroup', () => {
     let context: ITestContext;
 
     beforeEach(() => {

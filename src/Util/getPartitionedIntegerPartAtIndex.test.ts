@@ -9,6 +9,21 @@ interface ITestCase {
 
 const testCases: ITestCase[] = [
     {
+        value: 1,
+        partsCount: 1,
+        expected: [1]
+    },
+    {
+        value: 10,
+        partsCount: 2,
+        expected: [5, 5]
+    },
+    {
+        value: 9,
+        partsCount: 3,
+        expected: [3, 3, 3]
+    },
+    {
         value: 10,
         partsCount: 15,
         expected: [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1]
@@ -81,20 +96,23 @@ const testCases: ITestCase[] = [
     }
 ];
 
-describe.only('getPartitionedIntegerPartAtIndex()', () => {
+describe('getPartitionedIntegerPartAtIndex()', () => {
     testCases.forEach((testCase, i) => {
         it(`should pass test case ${i}`, () => {
-            const sum = testCase.expected.reduce(((sumUnderConstruction, expectedPart, i) => {
-                const part = getPartitionedIntegerPartAtIndex(
-                    testCase.value,
-                    testCase.partsCount,
-                    i
-                );
+            const sum = testCase.expected.reduce(
+                (sumUnderConstruction, expectedPart, i) => {
+                    const part = getPartitionedIntegerPartAtIndex(
+                        testCase.value,
+                        testCase.partsCount,
+                        i
+                    );
 
-                assert.equal(part, expectedPart);
+                    assert.equal(part, expectedPart);
 
-                return part + sumUnderConstruction;
-            }));
+                    return part + sumUnderConstruction;
+                },
+                0
+            );
 
             assert.equal(sum, testCase.value);
         });

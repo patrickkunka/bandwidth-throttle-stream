@@ -8,7 +8,7 @@
  * Uses "truncating integer division"
  * See: https://math.stackexchange.com/questions/2975936/split-a-number-into-n-numbers
  *
- * Modified to merge the resulting sets evenly.
+ * Modified to distribute the resulting sets evenly.
  *
  * @param value The integer to be partioned
  * @param partsCount The number of parts
@@ -20,23 +20,42 @@ const getPartitionedIntegerPartAtIndex = (
     partsCount: number,
     index: number
 ): number => {
-    const d = Math.floor(value / partsCount);
-    const r = value % partsCount;
+    // Evenly divide the `value` by `partsCount` and round it down to
+    // achieve the `loweredPartValue`
 
-    const [lower, higher] = [
+    const loweredPartValue = Math.floor(value / partsCount);
+
+    // If a remainder exists, it will be covered by 1 or more `raisedPartValue`
+
+    const raisedPartValue = loweredPartValue + 1;
+
+    const remainder = value % partsCount;
+
+    // Calculate the total number of occurences of `loweredPartValue` and `raisedPartValue`,
+    // and sort in ascending order to find the one with the lower occurences
+
+    const [lessOccurrent, moreOccurrent] = [
         {
-            count: partsCount - r,
-            value: d
+            count: partsCount - remainder,
+            value: loweredPartValue
         },
         {
-            count: r,
-            value: d + 1
+            count: remainder,
+            value: raisedPartValue
         }
     ].sort((a, b) => a.count - b.count);
 
-    const period = Math.round(partsCount / lower.count);
+    // Calculate the frequency that the less occurrent value should appear in order to
+    // evenly distribute it amongst the more occurrent values (e.g. `4` === 1 in 4)
 
-    return index % period > 0 ? higher.value : lower.value;
+    const frequency = Math.round(partsCount / lessOccurrent.count);
+
+    // Return either the `loweredPartValue` or `raisedPartValue` based on whether or not the
+    // provided index is exactly divisible by `frequency`
+
+    return index % frequency > 0 || !remainder
+        ? moreOccurrent.value
+        : lessOccurrent.value;
 };
 
 export default getPartitionedIntegerPartAtIndex;
