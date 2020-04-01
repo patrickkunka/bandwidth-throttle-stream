@@ -1,6 +1,7 @@
 import BandwidthThrottle from './BandwidthThrottle';
-import IBandwidthThrottleOptions from './Interfaces/IBandwidthThrottleOptions';
 import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
+import IConfig from './Interfaces/IConfig';
+import Config from './Config';
 
 /**
  * A class used to configure and bridge between one or more
@@ -14,10 +15,9 @@ import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAt
  */
 
 class BandwidthThrottleGroup {
-    private bytesPerSecond: number = Infinity;
+    private config = new Config();
     private inFlightRequests: number = 0;
     private bandwidthThrottles: BandwidthThrottle[] = [];
-    private resolutionHz: number = 40;
     private clockIntervalId: NodeJS.Timeout | null = null;
     private lastTickTime: number = -1;
     private tickIndex: number = -1;
@@ -27,49 +27,29 @@ class BandwidthThrottleGroup {
      *  throttling behaviour.
      */
 
-    constructor(options: IBandwidthThrottleOptions = {}) {
-        Object.assign(this, options);
+    constructor(options: IConfig) {
+        Object.assign(this.config, options);
 
         this.handleRequestEnd = this.handleRequestEnd.bind(this);
         this.handleRequestStart = this.handleRequestStart.bind(this);
-        this.processOpenRequests = this.processOpenRequests.bind(this);
-    }
-
-    /**
-     * A dynamically readable object providing the attached
-     * `BandwidthThrottle` instances with access to the group's
-     * latest configuration values at all times.
-     */
-
-    public get options(): IBandwidthThrottleOptions {
-        const self = this;
-
-        return {
-            get bytesPerSecond() {
-                return self.bytesPerSecond;
-            }
-        };
-    }
-
-    private get tickDurationMs(): number {
-        return 1000 / this.resolutionHz;
+        this.processInFlightRequests = this.processInFlightRequests.bind(this);
     }
 
     private getBytesForTickAtIndex(index: number): number {
         return getPartitionedIntegerPartAtIndex(
-            this.bytesPerSecond,
-            this.resolutionHz,
+            this.config.bytesPerSecond,
+            this.config.resolutionHz,
             index
         );
     }
 
-    public configire(options: IBandwidthThrottleOptions): void {
-        Object.assign(this, options);
+    public configire(options: IConfig): void {
+        Object.assign(this.config, options);
     }
 
     /**
-     * Creates and returns a pipeable `BandwidthThrottle` instance, and
-     * attaches it to the group.
+     * Creates and returns a pipeable `BandwidthThrottle` transform stream,
+     * and attaches it to the group.
      *
      * @param id An optional unique ID for the throttle, for
      *  logging purposes.
@@ -77,7 +57,7 @@ class BandwidthThrottleGroup {
 
     public createBandwidthThrottle(id?: string): BandwidthThrottle {
         const bandwidthThrottle = new BandwidthThrottle(
-            this.options,
+            this.config,
             this.handleRequestStart,
             this.handleRequestEnd,
             id
@@ -109,6 +89,8 @@ class BandwidthThrottleGroup {
 
         if (this.clockIntervalId) return;
 
+        // Start the processing clock when the first request starts
+
         this.clockIntervalId = this.startClock();
     }
 
@@ -138,7 +120,10 @@ class BandwidthThrottleGroup {
         // throttling to stay in sync, should the JavaScript timer become
         // delayed due to other thread-blocking processes.
 
-        return setInterval(this.processOpenRequests, this.tickDurationMs / 5);
+        return setInterval(
+            this.processInFlightRequests,
+            this.config.tickDurationMs / 5
+        );
     }
 
     private stopClock(): void {
@@ -149,25 +134,21 @@ class BandwidthThrottleGroup {
         this.clockIntervalId = null;
     }
 
-    private processOpenRequests(): void {
-        // Record the time since data was last passed to the
-        // readable stream
+    private processInFlightRequests(): void {
+        // Check the time since the last invocation
 
         const elapsedTime = Date.now() - this.lastTickTime;
 
-        // If the time elapsed is less than the provided interval
-        // duration, do nothing.
+        // If throttling active and the time elapsed is less than
+        // the provided interval duration, do nothing.
 
-        if (
-            this.bytesPerSecond !== Infinity &&
-            elapsedTime < this.tickDurationMs
-        )
+        if (this.config.isThrottled && elapsedTime < this.config.tickDurationMs)
             return;
 
         // Increment the tick index, or reset it to 0 whenever it surpasses
         // the desired resolution
 
-        if (this.tickIndex === this.resolutionHz - 1) {
+        if (this.tickIndex === this.config.resolutionHz - 1) {
             this.tickIndex = -1;
         }
 

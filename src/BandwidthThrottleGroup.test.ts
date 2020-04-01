@@ -1,8 +1,8 @@
 import {stub, SinonStub, useFakeTimers, SinonFakeTimers} from 'sinon';
 import {Readable, Writable} from 'stream';
 import {assert} from 'chai';
-import BandwidthThrottleGroup from './BandwidthThrottleGroup';
 import Callback from './Types/Callback';
+import createBandwidthThrottleGroup from './createBandwidthThrottleGroup';
 
 const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));
@@ -59,7 +59,7 @@ describe('BandwidthThrottleGroup', () => {
         'should destroy attached throttle instances on request end, so ' +
             'that they cannot be reused',
         async () => {
-            const throttleGroup = new BandwidthThrottleGroup();
+            const throttleGroup = createBandwidthThrottleGroup();
             const throttle = throttleGroup.createBandwidthThrottle();
             const buffer = createChunkOfBytes(100);
 
@@ -76,7 +76,7 @@ describe('BandwidthThrottleGroup', () => {
 
     testCases.forEach(testCase => {
         it(testCase.it, async () => {
-            const throttleGroup = new BandwidthThrottleGroup({
+            const throttleGroup = createBandwidthThrottleGroup({
                 bytesPerSecond: testCase.bytesPerSecond
             });
 

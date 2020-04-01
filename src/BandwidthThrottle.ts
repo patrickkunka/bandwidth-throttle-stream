@@ -2,7 +2,7 @@ import {Transform} from 'stream';
 
 import Callback from './Types/Callback';
 import RequestEndCallback from './Types/RequestEndCallback';
-import IBandwidthThrottleOptions from './Interfaces/IBandwidthThrottleOptions';
+import Config from './Config';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in
@@ -26,7 +26,7 @@ class BandwidthThrottle extends Transform {
     public id = '';
 
     private pendingBytesQueue: number[] = [];
-    private options: Readonly<IBandwidthThrottleOptions>;
+    private config: Readonly<Config>;
     private isInFlight: boolean = false;
     private handleRequestStart: Callback;
     private handleRequestEnd: RequestEndCallback;
@@ -39,7 +39,7 @@ class BandwidthThrottle extends Transform {
          * parent group.
          */
 
-        options: Readonly<IBandwidthThrottleOptions>,
+        config: Readonly<Config>,
 
         /**
          * A handler to be invoked whenever a request starts, so that
@@ -65,7 +65,7 @@ class BandwidthThrottle extends Transform {
     ) {
         super();
 
-        this.options = options;
+        this.config = config;
         this.handleRequestStart = handleRequestStart;
         this.handleRequestEnd = handleRequestEnd;
         this.id = id;
@@ -101,7 +101,7 @@ class BandwidthThrottle extends Transform {
         // If no throttling is applied, avoid any initial latency by immediately
         // processing the queue on the next frame.
 
-        if (this.options.bytesPerSecond === Infinity) {
+        if (!this.config.isThrottled) {
             this.process();
 
             done();
@@ -122,7 +122,7 @@ class BandwidthThrottle extends Transform {
      */
 
     public _flush(done: Callback): void {
-        if (this.options.bytesPerSecond === Infinity) {
+        if (!this.config.isThrottled) {
             this.handleRequestEnd(this);
 
             done();
