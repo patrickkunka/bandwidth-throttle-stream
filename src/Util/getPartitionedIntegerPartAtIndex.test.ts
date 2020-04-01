@@ -1,5 +1,6 @@
-import getPartitionedIntegerPartAtIndex from './getPartitionedIntegerPartAtIndex';
 import {assert} from 'chai';
+
+import getPartitionedIntegerPartAtIndex from './getPartitionedIntegerPartAtIndex';
 
 interface ITestCase {
     value: number;
@@ -97,8 +98,8 @@ const testCases: ITestCase[] = [
 ];
 
 describe('getPartitionedIntegerPartAtIndex()', () => {
-    testCases.forEach((testCase, i) => {
-        it(`should pass test case ${i}`, () => {
+    testCases.forEach((testCase, testCaseIndex) => {
+        it(`should pass test case ${testCaseIndex}`, () => {
             const sum = testCase.expected.reduce(
                 (sumUnderConstruction, expectedPart, i) => {
                     const part = getPartitionedIntegerPartAtIndex(

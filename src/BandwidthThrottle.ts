@@ -1,8 +1,8 @@
 import {Transform} from 'stream';
 
+import Config from './Config';
 import Callback from './Types/Callback';
 import RequestEndCallback from './Types/RequestEndCallback';
-import Config from './Config';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in

@@ -4,7 +4,7 @@ class Config implements IConfig {
     public bytesPerSecond: number = Infinity;
     public resolutionHz: number = 40;
 
-    public get isThrottled() {
+    public get isThrottled(): boolean {
         return this.bytesPerSecond < Infinity;
     }
 

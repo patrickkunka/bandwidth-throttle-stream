@@ -1,7 +1,7 @@
 import BandwidthThrottle from './BandwidthThrottle';
-import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
-import IConfig from './Interfaces/IConfig';
 import Config from './Config';
+import IConfig from './Interfaces/IConfig';
+import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
 
 /**
  * A class used to configure and bridge between one or more
@@ -35,15 +35,7 @@ class BandwidthThrottleGroup {
         this.processInFlightRequests = this.processInFlightRequests.bind(this);
     }
 
-    private getBytesForTickAtIndex(index: number): number {
-        return getPartitionedIntegerPartAtIndex(
-            this.config.bytesPerSecond,
-            this.config.resolutionHz,
-            index
-        );
-    }
-
-    public configire(options: IConfig): void {
+    public configure(options: IConfig): void {
         Object.assign(this.config, options);
     }
 
@@ -77,6 +69,14 @@ class BandwidthThrottleGroup {
     public destroy(): void {
         while (this.bandwidthThrottles.length)
             this.bandwidthThrottles.pop()!.destroy();
+    }
+
+    private getBytesForTickAtIndex(index: number): number {
+        return getPartitionedIntegerPartAtIndex(
+            this.config.bytesPerSecond,
+            this.config.resolutionHz,
+            index
+        );
     }
 
     /**

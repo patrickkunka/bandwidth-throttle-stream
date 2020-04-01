@@ -1,8 +1,9 @@
-import {stub, SinonStub, useFakeTimers, SinonFakeTimers} from 'sinon';
-import {Readable, Writable} from 'stream';
 import {assert} from 'chai';
-import Callback from './Types/Callback';
+import {SinonFakeTimers, SinonStub, stub, useFakeTimers} from 'sinon';
+import {Readable, Writable} from 'stream';
+
 import createBandwidthThrottleGroup from './createBandwidthThrottleGroup';
+import Callback from './Types/Callback';
 
 const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));
@@ -48,7 +49,7 @@ describe('BandwidthThrottleGroup', () => {
         context = {
             clock: useFakeTimers(),
             outputStub,
-            inputStream: new Readable({read() {}}),
+            inputStream: new Readable({read: () => void 0}),
             outputStream: new Writable({write: outputStub})
         };
     });

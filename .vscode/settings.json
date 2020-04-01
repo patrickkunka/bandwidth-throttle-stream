@@ -1,0 +1,5 @@
+{
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "tslint.configFile": "./config/tslint/tslint.json",
+    "typescript.preferences.quoteStyle": "single"
+}
