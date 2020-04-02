@@ -31,7 +31,7 @@ class BandwidthThrottleGroup {
         Object.assign(this.config, options);
 
         this.createBandwidthThrottle = this.createBandwidthThrottle.bind(this);
-        this.handleRequestEnd = this.handleRequestEnd.bind(this);
+        this.handleRequestStop = this.handleRequestStop.bind(this);
         this.handleRequestStart = this.handleRequestStart.bind(this);
         this.processInFlightRequests = this.processInFlightRequests.bind(this);
     }
@@ -52,7 +52,7 @@ class BandwidthThrottleGroup {
         const bandwidthThrottle = new BandwidthThrottle(
             this.config,
             this.handleRequestStart,
-            this.handleRequestEnd,
+            this.handleRequestStop,
             id
         );
 
@@ -88,16 +88,15 @@ class BandwidthThrottleGroup {
     }
 
     /**
-     * Destroys the `BandwidthThrottle` instance, as it can not
-     * be used again once ended. Removes its reference from both the
-     * `inFlightRequests` and `bandwidthThrottles` arrays.
+     * Removes the reference of a throttle from the `inFlightRequests` array
+     * in order to redistribute bandwidth while a request is inactive or after
+     * it has ended.
      *
      * If no other in flight requets are active at that point, the internal
      * clock is stopped to save resources.
-     * TODO: this is now STOP not END, can be restarted
      */
 
-    private handleRequestEnd(bandwidthThrottle: BandwidthThrottle): void {
+    private handleRequestStop(bandwidthThrottle: BandwidthThrottle): void {
         this.inFlightRequests.splice(
             this.inFlightRequests.indexOf(bandwidthThrottle),
             1

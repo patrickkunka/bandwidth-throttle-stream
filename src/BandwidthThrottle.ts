@@ -29,7 +29,7 @@ class BandwidthThrottle extends Transform {
     private config: Readonly<Config>;
     private isInFlight: boolean = false;
     private handleRequestStart: CallbackWithSelf;
-    private handleRequestEnd: CallbackWithSelf;
+    private handleRequestStop: CallbackWithSelf;
     private transformCallback: Callback | null = null;
     private flushCallback: Callback | null = null;
 
@@ -67,7 +67,7 @@ class BandwidthThrottle extends Transform {
 
         this.config = config;
         this.handleRequestStart = handleRequestStart;
-        this.handleRequestEnd = handleRequestEnd;
+        this.handleRequestStop = handleRequestEnd;
         this.id = id;
     }
 
@@ -143,7 +143,7 @@ class BandwidthThrottle extends Transform {
      */
 
     public abort(): void {
-        this.handleRequestEnd(this);
+        this.handleRequestStop(this);
     }
 
     public process(maxBytesToProcess: number = Infinity): void {
@@ -166,7 +166,7 @@ class BandwidthThrottle extends Transform {
 
         this.transformCallback = null;
 
-        this.handleRequestEnd(this);
+        this.handleRequestStop(this);
 
         this.isInFlight = false;
 
