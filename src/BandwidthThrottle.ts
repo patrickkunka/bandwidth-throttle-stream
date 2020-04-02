@@ -2,7 +2,7 @@ import {Transform} from 'stream';
 
 import Config from './Config';
 import Callback from './Types/Callback';
-import RequestEndCallback from './Types/RequestEndCallback';
+import CallbackWithSelf from './Types/CallbackWithSelf';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in
@@ -28,8 +28,8 @@ class BandwidthThrottle extends Transform {
     private pendingBytesQueue: number[] = [];
     private config: Readonly<Config>;
     private isInFlight: boolean = false;
-    private handleRequestStart: Callback;
-    private handleRequestEnd: RequestEndCallback;
+    private handleRequestStart: CallbackWithSelf;
+    private handleRequestEnd: CallbackWithSelf;
     private transformCallback: Callback | null = null;
     private flushCallback: Callback | null = null;
 
@@ -47,7 +47,7 @@ class BandwidthThrottle extends Transform {
          * requests in flight across the group.
          */
 
-        handleRequestStart: Callback,
+        handleRequestStart: CallbackWithSelf,
 
         /**
          * A handler to be invoked whenever a request ends, so that
@@ -55,7 +55,7 @@ class BandwidthThrottle extends Transform {
          * requests in flight across the group.
          */
 
-        handleRequestEnd: RequestEndCallback,
+        handleRequestEnd: CallbackWithSelf,
 
         /**
          * A unique ID for the throttle, for debugging purposes.
@@ -83,10 +83,11 @@ class BandwidthThrottle extends Transform {
 
     public _transform(chunk: Buffer, _, done: Callback): void {
         if (!this.isInFlight) {
-            // If this is the first chunk for the throttle instance,
-            // signal that the request has started.
+            // If this is the first chunk of data to be processed, or
+            // if is processing was previously paused due to a lack of
+            // input signal that the request is in flight.
 
-            this.handleRequestStart();
+            this.handleRequestStart(this);
 
             this.isInFlight = true;
         }
@@ -122,15 +123,16 @@ class BandwidthThrottle extends Transform {
      */
 
     public _flush(done: Callback): void {
-        if (!this.config.isThrottled) {
-            this.handleRequestEnd(this);
-
+        if (this.pendingBytesQueue.length === 0) {
             done();
+
+            this.destroy();
 
             return;
         }
 
-        // Else, wait until all pending data processed then call flush done
+        // Else, store callback so that it can be called after all
+        // pending data processed
 
         this.flushCallback = done;
     }
@@ -164,6 +166,10 @@ class BandwidthThrottle extends Transform {
 
         this.transformCallback = null;
 
+        this.handleRequestEnd(this);
+
+        this.isInFlight = false;
+
         if (!this.flushCallback) return;
 
         // If the writing of data has ended and flush has already been
@@ -171,7 +177,7 @@ class BandwidthThrottle extends Transform {
 
         this.flushCallback();
 
-        this.handleRequestEnd(this);
+        this.destroy();
     }
 }
 

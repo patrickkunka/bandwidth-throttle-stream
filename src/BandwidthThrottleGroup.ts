@@ -16,7 +16,7 @@ import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAt
 
 class BandwidthThrottleGroup {
     private config = new Config();
-    private inFlightRequests: number = 0;
+    private inFlightRequests: BandwidthThrottle[] = [];
     private bandwidthThrottles: BandwidthThrottle[] = [];
     private clockIntervalId: NodeJS.Timeout | null = null;
     private lastTickTime: number = -1;
@@ -30,6 +30,7 @@ class BandwidthThrottleGroup {
     constructor(options: IConfig) {
         Object.assign(this.config, options);
 
+        this.createBandwidthThrottle = this.createBandwidthThrottle.bind(this);
         this.handleRequestEnd = this.handleRequestEnd.bind(this);
         this.handleRequestStart = this.handleRequestStart.bind(this);
         this.processInFlightRequests = this.processInFlightRequests.bind(this);
@@ -84,8 +85,8 @@ class BandwidthThrottleGroup {
      * attached `BandwidthThrottle` instance starts.
      */
 
-    private handleRequestStart(): void {
-        this.inFlightRequests++;
+    private handleRequestStart(bandwidthThrottle: BandwidthThrottle): void {
+        this.inFlightRequests.push(bandwidthThrottle);
 
         if (this.clockIntervalId) return;
 
@@ -95,23 +96,22 @@ class BandwidthThrottleGroup {
     }
 
     /**
-     * Decrements the number of "in-flight" requests when a request in any
-     * attached `BandwidthThrottle` instance ends and all data has been sent.
-     *
      * Destroys the `BandwidthThrottle` instance, as it can not
-     * be used again once ended.
+     * be used again once ended. Removes its reference from both the
+     * `inFlightRequests` and `bandwidthThrottles` arrays.
+     *
+     * If no other in flight requets are active at that point, the internal
+     * clock is stopped to save resources.
+     * TODO: this is now STOP not END, can be restarted
      */
 
     private handleRequestEnd(bandwidthThrottle: BandwidthThrottle): void {
-        this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
+        this.inFlightRequests.splice(
+            this.inFlightRequests.indexOf(bandwidthThrottle),
+            1
+        );
 
-        const index = this.bandwidthThrottles.indexOf(bandwidthThrottle);
-
-        bandwidthThrottle.destroy();
-
-        this.bandwidthThrottles.splice(index, 1);
-
-        if (this.inFlightRequests === 0) this.stopClock();
+        if (this.inFlightRequests.length === 0) this.stopClock();
     }
 
     private startClock(): NodeJS.Timeout {
@@ -159,17 +159,34 @@ class BandwidthThrottleGroup {
 
         const bytesForTickIndex = this.getBytesForTickAtIndex(this.tickIndex);
 
-        // Spread those bytes evenly across all active requests
+        // Spread those bytes evenly across all active requests, by figuring out which "portion"
+        // of the per-second cycle we are in, and rotating the in-flight index by that amount
 
-        this.bandwidthThrottles.forEach((throttle, index) => {
+        const cyclePortion = Math.floor(
+            (this.tickIndex / this.config.resolutionHz) *
+                this.inFlightRequests.length
+        );
+
+        for (let i = 0; i < this.inFlightRequests.length; i++) {
+            const bandwidthThrottle = this.inFlightRequests[i];
+
+            const evenlyDistributedIndex =
+                (i + cyclePortion) % this.inFlightRequests.length;
+
             const bytesForTickPerRequest = getPartitionedIntegerPartAtIndex(
                 bytesForTickIndex,
-                this.bandwidthThrottles.length,
-                index
+                this.inFlightRequests.length,
+                evenlyDistributedIndex
             );
 
-            throttle.process(bytesForTickPerRequest);
-        });
+            const currentInFlight = this.inFlightRequests.length;
+
+            bandwidthThrottle.process(bytesForTickPerRequest);
+
+            if (this.inFlightRequests.length < currentInFlight) {
+                i--;
+            }
+        }
 
         // Increment the last push time, and return
 
