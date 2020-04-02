@@ -94,10 +94,92 @@ const testCases: ITestCase[] = [
             1,
             1
         ]
+    },
+    {
+        value: 50,
+        partsCount: 80,
+        expected: [
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0
+        ]
     }
 ];
 
-describe('getPartitionedIntegerPartAtIndex()', () => {
+describe.only('getPartitionedIntegerPartAtIndex()', () => {
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, () => {
             const sum = testCase.expected.reduce(
@@ -108,7 +190,11 @@ describe('getPartitionedIntegerPartAtIndex()', () => {
                         i
                     );
 
-                    assert.equal(part, expectedPart);
+                    assert.equal(
+                        part,
+                        expectedPart,
+                        `expected part with value ${part} at index ${i} to equal ${expectedPart}`
+                    );
 
                     return part + sumUnderConstruction;
                 },

@@ -72,14 +72,6 @@ class BandwidthThrottleGroup {
             this.bandwidthThrottles.pop()!.destroy();
     }
 
-    private getBytesForTickAtIndex(index: number): number {
-        return getPartitionedIntegerPartAtIndex(
-            this.config.bytesPerSecond,
-            this.config.resolutionHz,
-            index
-        );
-    }
-
     /**
      * Increments the number of "in-flight" requests when a request in any
      * attached `BandwidthThrottle` instance starts.
@@ -154,34 +146,26 @@ class BandwidthThrottleGroup {
 
         this.tickIndex++;
 
-        // Determine the total amounts of bytes that can be pushed on this tick,
-        // across all active requests
-
-        const bytesForTickIndex = this.getBytesForTickAtIndex(this.tickIndex);
-
-        // Spread those bytes evenly across all active requests, by figuring out which "portion"
-        // of the per-second cycle we are in, and rotating the in-flight index by that amount
-
-        const cyclePortion = Math.floor(
-            (this.tickIndex / this.config.resolutionHz) *
-                this.inFlightRequests.length
-        );
-
         for (let i = 0; i < this.inFlightRequests.length; i++) {
             const bandwidthThrottle = this.inFlightRequests[i];
 
-            const evenlyDistributedIndex =
-                (i + cyclePortion) % this.inFlightRequests.length;
+            // Determine the amount of bytes to process for each request
+            // on this tick
 
-            const bytesForTickPerRequest = getPartitionedIntegerPartAtIndex(
-                bytesForTickIndex,
-                this.inFlightRequests.length,
-                evenlyDistributedIndex
+            // NB: In order to ensure distribution, each active request
+            // will take a relative portion of the total "pattern".
+            // However, during extremely high throttling, this can lead
+            // to requests becoming unbalanced.
+
+            const bytesCount = getPartitionedIntegerPartAtIndex(
+                this.config.bytesPerSecond,
+                this.config.resolutionHz * this.inFlightRequests.length,
+                this.tickIndex + this.config.resolutionHz * i
             );
 
             const currentInFlight = this.inFlightRequests.length;
 
-            bandwidthThrottle.process(bytesForTickPerRequest);
+            bandwidthThrottle.process(bytesCount);
 
             if (this.inFlightRequests.length < currentInFlight) {
                 i--;

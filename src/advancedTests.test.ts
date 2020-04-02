@@ -45,10 +45,10 @@ const testCases: ITestCase[] = [
     },
     {
         tickIntervalMs: 1000,
-        bytesPerSecond: 50,
+        bytesPerSecond: 500,
         requests: [
-            {timeline: '==========', bytes: 250},
-            {timeline: '==========', bytes: 250}
+            {timeline: '=====', bytes: 1250},
+            {timeline: '=====', bytes: 1250}
         ]
     },
     {
@@ -85,11 +85,20 @@ const testCases: ITestCase[] = [
     },
     {
         tickIntervalMs: 1000,
-        bytesPerSecond: 100,
+        bytesPerSecond: 1000,
         requests: [
-            {timeline: '==  ', bytes: 150},
-            {timeline: ' == ', bytes: 100},
-            {timeline: '  ==', bytes: 150}
+            {timeline: '==  ', bytes: 1500},
+            {timeline: ' == ', bytes: 1000},
+            {timeline: '  ==', bytes: 1500}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 900,
+        requests: [
+            {timeline: '======', bytes: 3600},
+            {timeline: '   ===', bytes: 900},
+            {timeline: '   ===', bytes: 900}
         ]
     }
 ];
@@ -212,15 +221,11 @@ describe.only('BandwidthThrottleGroup', () => {
             requestContexts.forEach((aRequestContext, requestIndex) => {
                 assert(aRequestContext.outputStub.called);
 
-                assert.isAbove(
-                    aRequestContext.endTime,
-                    -1,
-                    `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
-                        testCase.tickIntervalMs}ms`
-                );
                 assert.equal(
                     aRequestContext.endTime,
-                    aRequestContext.endTick * testCase.tickIntervalMs
+                    aRequestContext.endTick * testCase.tickIntervalMs,
+                    `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
+                        testCase.tickIntervalMs}ms`
                 );
             });
         });
