@@ -1,3 +1,5 @@
+![CI](https://github.com/patrickkunka/bandwidth-throttle-stream/workflows/CI/badge.svg)
+
 # Bandwidth Throttle Stream
 
 A Node.js transform stream for throttling bandwidth.
