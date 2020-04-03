@@ -31,7 +31,7 @@ class BandwidthThrottle extends Transform {
     private handleRequestStart: CallbackWithSelf;
     private handleRequestStop: CallbackWithSelf;
     private handleRequestDestroy: CallbackWithSelf;
-    private transformCallback: Callback | null = null;
+    private transformCallbacks: Callback[] = [];
 
     constructor(
         /**
@@ -129,7 +129,7 @@ class BandwidthThrottle extends Transform {
             return;
         }
 
-        this.transformCallback = done;
+        this.transformCallbacks.push(done);
     }
 
     /**
@@ -154,20 +154,25 @@ class BandwidthThrottle extends Transform {
 
         // If there is more data to be processed, stop here
 
-        if (this.pendingBytesQueue.length > 0 || !this.transformCallback)
-            return;
+        if (this.pendingBytesQueue.length > 0) return;
 
-        // If a `transform` callback has been provided, call it
+        // No data left to be processed, call the first
+        // callback in the queue
 
-        this.transformCallback();
+        if (this.transformCallbacks.length > 0)
+            this.transformCallbacks.shift()!();
 
-        this.transformCallback = null;
+        // This may result in other queued data being passed to
+        // `_transform`, and other callbacks being pushed.
+
+        if (this.transformCallbacks.length > 0) return;
+
+        // If there are no other callbacks at this point
+        // we can consider the request inactive.
 
         this.handleRequestStop(this);
 
         this.isInFlight = false;
-
-        this.destroy();
     }
 }
 
