@@ -2,6 +2,7 @@ import {assert} from 'chai';
 import {SinonFakeTimers, SinonStub, stub, useFakeTimers} from 'sinon';
 import {Readable, Writable} from 'stream';
 
+import BandwidthThrottle from './BandwidthThrottle';
 import createBandwidthThrottleGroup from './createBandwidthThrottleGroup';
 import Callback from './Types/Callback';
 
@@ -9,48 +10,105 @@ const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));
 
 interface ITestContext {
-    outputStub: SinonStub<[Buffer, string, Callback]>;
-    inputStream: Readable;
-    outputStream: Writable;
     clock: SinonFakeTimers;
 }
 
+interface IRequestContext {
+    outputStub: SinonStub<[Buffer, string, Callback], void>;
+    inputStream: Readable;
+    outputStream: Writable;
+    totalTicks: number;
+    startTick: number;
+    endTick: number;
+    endTime: number;
+    timeline: string;
+    bytes: number;
+    throttle: BandwidthThrottle;
+}
+
 interface ITestCase {
-    it: string;
-    bytesToProcess: number;
     bytesPerSecond: number;
-    expectedCompletionDurationSeconds: number;
+    tickIntervalMs: number;
+    requests: Array<{timeline: string; bytes: number}>;
 }
 
 const testCases: ITestCase[] = [
     {
-        it:
-            'it processes all data by the next tick, with no throttling applied',
-        bytesToProcess: 100,
+        tickIntervalMs: 1000,
         bytesPerSecond: Infinity,
-        expectedCompletionDurationSeconds: 0
+        requests: [{timeline: '', bytes: 100}]
     },
     {
-        it: 'completes processing of throttled data in the expected time',
-        bytesToProcess: 500,
+        tickIntervalMs: 1000,
         bytesPerSecond: 50,
-        expectedCompletionDurationSeconds: 10
+        requests: [{timeline: '==========', bytes: 500}]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 50,
+        requests: [
+            {timeline: '======', bytes: 150},
+            {timeline: '======', bytes: 150}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 100,
+        requests: [
+            {timeline: '====    ', bytes: 400},
+            {timeline: '    ====', bytes: 400}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 100,
+        requests: [
+            {timeline: '============', bytes: 800},
+            {timeline: '    ========', bytes: 400}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 100,
+        requests: [
+            {timeline: '============    ', bytes: 800},
+            {timeline: '    ============', bytes: 800}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 100,
+        requests: [
+            {timeline: '================', bytes: 1200},
+            {timeline: '    ========    ', bytes: 400}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 1000,
+        requests: [
+            {timeline: '==  ', bytes: 1500},
+            {timeline: ' == ', bytes: 1000},
+            {timeline: '  ==', bytes: 1500}
+        ]
+    },
+    {
+        tickIntervalMs: 1000,
+        bytesPerSecond: 900,
+        requests: [
+            {timeline: '======', bytes: 3600},
+            {timeline: '   ===', bytes: 900},
+            {timeline: '   ===', bytes: 900}
+        ]
     }
 ];
-
-const TEST_RUNNER_TICK_DURATION = 100;
 
 describe('BandwidthThrottleGroup', () => {
     let context: ITestContext;
 
     beforeEach(() => {
-        const outputStub = stub<[Buffer, string, Callback]>();
-
         context = {
-            clock: useFakeTimers(),
-            outputStub,
-            inputStream: new Readable({read: () => void 0}),
-            outputStream: new Writable({write: outputStub})
+            clock: useFakeTimers()
         };
     });
 
@@ -75,43 +133,112 @@ describe('BandwidthThrottleGroup', () => {
         }
     );
 
-    testCases.forEach(testCase => {
-        it(testCase.it, async () => {
+    testCases.forEach((testCase, testCaseIndex) => {
+        it(`should pass test case ${testCaseIndex}`, async () => {
             const throttleGroup = createBandwidthThrottleGroup({
                 bytesPerSecond: testCase.bytesPerSecond
             });
 
-            const throttle = throttleGroup.createBandwidthThrottle();
+            const requestContexts = testCase.requests.map(
+                (request, requestIndex) => {
+                    let bytesProcessed = 0;
 
-            let totalBytesProcessed = 0;
-            let virtualTestDuration = 0;
+                    const outputStub = stub<
+                        [Buffer, string, Callback],
+                        void
+                    >().callsFake((bytes, _, done) => {
+                        bytesProcessed += bytes.length;
 
-            context.outputStub.callsFake((chunk, _, done) => {
-                totalBytesProcessed += chunk.length;
+                        if (bytesProcessed === request.bytes) {
+                            requestContext.endTime = Date.now();
+                        }
 
-                done();
+                        done();
+                    });
 
-                if (totalBytesProcessed < testCase.bytesToProcess) return;
+                    const totalTicks = request.timeline.length;
+                    const startTick = Math.max(
+                        0,
+                        request.timeline.indexOf('=')
+                    );
+                    const endTick = request.timeline.lastIndexOf('=') + 1;
+                    const throttle = throttleGroup.createBandwidthThrottle();
+                    const inputStream = new Readable({read: () => void 0});
+                    const outputStream = new Writable({write: outputStub});
 
-                assert.equal(
-                    virtualTestDuration / 1000,
-                    testCase.expectedCompletionDurationSeconds
-                );
-            });
+                    inputStream.pipe(throttle).pipe(outputStream);
 
-            context.inputStream.pipe(throttle).pipe(context.outputStream);
+                    const requestContext: IRequestContext = {
+                        bytes: request.bytes,
+                        inputStream,
+                        outputStream,
+                        outputStub,
+                        startTick,
+                        endTick,
+                        endTime: -1,
+                        totalTicks,
+                        throttle,
+                        timeline: request.timeline
+                    };
 
-            const dataIn = createChunkOfBytes(testCase.bytesToProcess);
+                    return requestContext;
+                }
+            );
 
-            context.inputStream.push(dataIn);
+            const maxTicks = Math.max(
+                ...requestContexts.map(({totalTicks}) => totalTicks)
+            );
+            const testDurationMs = maxTicks * testCase.tickIntervalMs;
 
-            while (totalBytesProcessed < testCase.bytesToProcess) {
+            let tickIndex = 0;
+
+            do {
+                requestContexts.forEach((aRequestContext, requestIndex) => {
+                    if (aRequestContext.startTick === tickIndex) {
+                        // Data write start
+
+                        const dataIn = createChunkOfBytes(
+                            aRequestContext.bytes
+                        );
+
+                        aRequestContext.inputStream.push(dataIn);
+                    }
+                });
+
                 await Promise.resolve();
 
-                virtualTestDuration += TEST_RUNNER_TICK_DURATION;
+                if (tickIndex < maxTicks) {
+                    // Only tick the clock if there are further iterations to be completed
 
-                context.clock.tick(TEST_RUNNER_TICK_DURATION);
-            }
+                    context.clock.tick(testCase.tickIntervalMs);
+                }
+
+                tickIndex++;
+            } while (tickIndex < maxTicks);
+
+            assert.equal(Date.now(), testDurationMs);
+
+            requestContexts.forEach((aRequestContext, requestIndex) => {
+                assert(aRequestContext.outputStub.called);
+
+                assert.isAtMost(
+                    aRequestContext.endTime,
+                    aRequestContext.endTick * testCase.tickIntervalMs,
+                    `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
+                        testCase.tickIntervalMs}ms`
+                );
+
+                // Allow requests to finish early
+                // (if bytes must be sparsely distributed)
+
+                assert.isAtLeast(
+                    aRequestContext.endTime,
+                    aRequestContext.endTick * testCase.tickIntervalMs -
+                        throttleGroup.config.tickDurationMs,
+                    `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
+                        testCase.tickIntervalMs}ms`
+                );
+            });
         });
     });
 });

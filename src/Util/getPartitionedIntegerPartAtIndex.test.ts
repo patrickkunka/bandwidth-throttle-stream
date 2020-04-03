@@ -124,8 +124,67 @@ const testCases: ITestCase[] = [
             1,
             1,
             0,
+            0,
+            1,
+            0,
             1,
             1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1
+        ]
+    },
+    {
+        value: 25,
+        partsCount: 40,
+        expected: [
             0,
             1,
             1,
@@ -163,25 +222,18 @@ const testCases: ITestCase[] = [
             1,
             1,
             0,
-            1,
-            1,
             0,
-            1,
-            1,
-            0,
-            1,
-            1,
-            0,
-            1,
             1,
             0
         ]
     }
 ];
 
-describe.only('getPartitionedIntegerPartAtIndex()', () => {
+describe('getPartitionedIntegerPartAtIndex()', () => {
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, () => {
+            assert.equal(testCase.expected.length, testCase.partsCount);
+
             const sum = testCase.expected.reduce(
                 (sumUnderConstruction, expectedPart, i) => {
                     const part = getPartitionedIntegerPartAtIndex(

@@ -15,12 +15,14 @@ import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAt
  */
 
 class BandwidthThrottleGroup {
-    private config = new Config();
+    public config: Readonly<Config> = new Config();
+
     private inFlightRequests: BandwidthThrottle[] = [];
     private bandwidthThrottles: BandwidthThrottle[] = [];
     private clockIntervalId: NodeJS.Timeout | null = null;
     private lastTickTime: number = -1;
-    private tickIndex: number = -1;
+    private tickIndex: number = 0;
+    private secondIndex: number = 0;
 
     /**
      * @param options Consumer-provided options defining the
@@ -123,10 +125,16 @@ class BandwidthThrottleGroup {
         clearInterval(this.clockIntervalId);
 
         this.clockIntervalId = null;
+        this.tickIndex = 0;
+        this.secondIndex = 0;
     }
 
+    // step 1 - evenly destribute bytes between active requests
+    //  if cannot be evenly divided, use per second rotation to balance
+    // step 2 - for each individual request, distribute over resolution
+
     private processInFlightRequests(): void {
-        // Check the time since the last invocation
+        // Check the time since data was last processed
 
         const elapsedTime = Date.now() - this.lastTickTime;
 
@@ -136,39 +144,41 @@ class BandwidthThrottleGroup {
         if (this.config.isThrottled && elapsedTime < this.config.tickDurationMs)
             return;
 
-        // Increment the tick index, or reset it to 0 whenever it surpasses
-        // the desired resolution
+        const period = this.secondIndex % this.inFlightRequests.length;
 
-        if (this.tickIndex === this.config.resolutionHz - 1) {
-            this.tickIndex = -1;
+        for (let i = 0; i < this.inFlightRequests.length; i++) {
+            const currentInFlightRequestsCount = this.inFlightRequests.length;
+            const bandwidthThrottle = this.inFlightRequests[i];
+
+            const rotatedIndex = (i + period) % currentInFlightRequestsCount;
+
+            const bytesPerRequestPerSecond = getPartitionedIntegerPartAtIndex(
+                this.config.bytesPerSecond,
+                this.inFlightRequests.length,
+                rotatedIndex
+            );
+
+            const bytesPerRequestPerTick = getPartitionedIntegerPartAtIndex(
+                bytesPerRequestPerSecond,
+                this.config.resolutionHz,
+                this.tickIndex
+            );
+
+            bandwidthThrottle.process(bytesPerRequestPerTick);
+
+            if (this.inFlightRequests.length < currentInFlightRequestsCount) {
+                i--;
+            }
         }
 
         this.tickIndex++;
 
-        for (let i = 0; i < this.inFlightRequests.length; i++) {
-            const bandwidthThrottle = this.inFlightRequests[i];
+        // Increment the tick index, or reset it to 0 whenever it surpasses
+        // the desired resolution
 
-            // Determine the amount of bytes to process for each request
-            // on this tick
-
-            // NB: In order to ensure distribution, each active request
-            // will take a relative portion of the total "pattern".
-            // However, during extremely high throttling, this can lead
-            // to requests becoming unbalanced.
-
-            const bytesCount = getPartitionedIntegerPartAtIndex(
-                this.config.bytesPerSecond,
-                this.config.resolutionHz * this.inFlightRequests.length,
-                this.tickIndex + this.config.resolutionHz * i
-            );
-
-            const currentInFlight = this.inFlightRequests.length;
-
-            bandwidthThrottle.process(bytesCount);
-
-            if (this.inFlightRequests.length < currentInFlight) {
-                i--;
-            }
+        if (this.tickIndex === this.config.resolutionHz) {
+            this.tickIndex = 0;
+            this.secondIndex++;
         }
 
         // Increment the last push time, and return
