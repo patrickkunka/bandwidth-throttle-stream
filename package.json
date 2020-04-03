@@ -5,7 +5,7 @@
     "private": true,
     "main": "./dist/index.js",
     "scripts": {
-        "test": "TS_NODE_PROJECT=./tsconfig.json mocha --opts ./config/mocha/mocha.opts",
+        "test": "TS_NODE_PROJECT=./tsconfig.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
         "build": "tsc -c ./tsconfig.json"

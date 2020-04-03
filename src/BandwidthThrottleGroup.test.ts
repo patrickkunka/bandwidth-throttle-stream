@@ -118,7 +118,9 @@ describe('BandwidthThrottleGroup', () => {
         'should destroy attached throttle instances on request end, so ' +
             'that they cannot be reused',
         async () => {
-            const throttleGroup = createBandwidthThrottleGroup();
+            const throttleGroup = createBandwidthThrottleGroup({
+                bytesPerSecond: 100
+            });
             const throttle = throttleGroup.createBandwidthThrottle();
             const buffer = createChunkOfBytes(100);
 
@@ -127,11 +129,38 @@ describe('BandwidthThrottleGroup', () => {
 
                 throttle.write(buffer);
                 throttle.end();
+
+                context.clock.tick(1000);
             });
 
             assert.throws(() => throttle.write(buffer), Error);
         }
     );
+
+    it('should handle data being written multiple times for a request', async () => {
+        const throttleGroup = createBandwidthThrottleGroup({
+            bytesPerSecond: 100
+        });
+        const throttle = throttleGroup.createBandwidthThrottle();
+        const bufferA = createChunkOfBytes(50);
+        const bufferB = createChunkOfBytes(50);
+
+        let bytesWritten = 0;
+
+        throttle.onBytesWritten = chunk => (bytesWritten += chunk.length);
+
+        await new Promise(resolve => {
+            throttle.on('data', () => void 0).on('end', resolve);
+
+            throttle.write(bufferA);
+            throttle.write(bufferB);
+            throttle.end();
+
+            context.clock.tick(1000);
+        });
+
+        assert.equal(bytesWritten, 100);
+    });
 
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, async () => {
@@ -139,51 +168,46 @@ describe('BandwidthThrottleGroup', () => {
                 bytesPerSecond: testCase.bytesPerSecond
             });
 
-            const requestContexts = testCase.requests.map(
-                (request, requestIndex) => {
-                    let bytesProcessed = 0;
+            const requestContexts = testCase.requests.map(request => {
+                let bytesProcessed = 0;
 
-                    const outputStub = stub<
-                        [Buffer, string, Callback],
-                        void
-                    >().callsFake((bytes, _, done) => {
-                        bytesProcessed += bytes.length;
+                const outputStub = stub<
+                    [Buffer, string, Callback],
+                    void
+                >().callsFake((bytes, _, done) => {
+                    bytesProcessed += bytes.length;
 
-                        if (bytesProcessed === request.bytes) {
-                            requestContext.endTime = Date.now();
-                        }
+                    if (bytesProcessed === request.bytes) {
+                        requestContext.endTime = Date.now();
+                    }
 
-                        done();
-                    });
+                    done();
+                });
 
-                    const totalTicks = request.timeline.length;
-                    const startTick = Math.max(
-                        0,
-                        request.timeline.indexOf('=')
-                    );
-                    const endTick = request.timeline.lastIndexOf('=') + 1;
-                    const throttle = throttleGroup.createBandwidthThrottle();
-                    const inputStream = new Readable({read: () => void 0});
-                    const outputStream = new Writable({write: outputStub});
+                const totalTicks = request.timeline.length;
+                const startTick = Math.max(0, request.timeline.indexOf('='));
+                const endTick = request.timeline.lastIndexOf('=') + 1;
+                const throttle = throttleGroup.createBandwidthThrottle();
+                const inputStream = new Readable({read: () => void 0});
+                const outputStream = new Writable({write: outputStub});
 
-                    inputStream.pipe(throttle).pipe(outputStream);
+                inputStream.pipe(throttle).pipe(outputStream);
 
-                    const requestContext: IRequestContext = {
-                        bytes: request.bytes,
-                        inputStream,
-                        outputStream,
-                        outputStub,
-                        startTick,
-                        endTick,
-                        endTime: -1,
-                        totalTicks,
-                        throttle,
-                        timeline: request.timeline
-                    };
+                const requestContext: IRequestContext = {
+                    bytes: request.bytes,
+                    inputStream,
+                    outputStream,
+                    outputStub,
+                    startTick,
+                    endTick,
+                    endTime: -1,
+                    totalTicks,
+                    throttle,
+                    timeline: request.timeline
+                };
 
-                    return requestContext;
-                }
-            );
+                return requestContext;
+            });
 
             const maxTicks = Math.max(
                 ...requestContexts.map(({totalTicks}) => totalTicks)
@@ -239,6 +263,66 @@ describe('BandwidthThrottleGroup', () => {
                         testCase.tickIntervalMs}ms`
                 );
             });
+        });
+    });
+
+    describe('.destroy()', () => {
+        it('destroys all throttles attached to a group such that they can not be used', () => {
+            const throttleGroup = createBandwidthThrottleGroup();
+            const throttle = throttleGroup.createBandwidthThrottle();
+            const buffer = createChunkOfBytes(100);
+
+            throttleGroup.destroy();
+
+            assert.throws(() => throttle.write(buffer), Error);
+        });
+    });
+
+    describe('.configure()', () => {
+        it('allows the group to be reconfigured after instantiation', () => {
+            const throttleGroup = createBandwidthThrottleGroup({
+                bytesPerSecond: 500,
+                resolutionHz: 40
+            });
+
+            throttleGroup.configure({
+                bytesPerSecond: 250,
+                resolutionHz: 20
+            });
+
+            assert.equal(throttleGroup.config.bytesPerSecond, 250);
+            assert.equal(throttleGroup.config.resolutionHz, 20);
+        });
+    });
+
+    describe('.abort()', () => {
+        it('halts the processing of all further data', async () => {
+            const throttleGroup = createBandwidthThrottleGroup({
+                bytesPerSecond: 50
+            });
+
+            const throttle = throttleGroup.createBandwidthThrottle();
+            const buffer = createChunkOfBytes(100);
+
+            let bytesWritten = 0;
+
+            throttle.onBytesWritten = chunk => (bytesWritten += chunk.length);
+
+            throttle.write(buffer);
+
+            context.clock.tick(1000);
+
+            await Promise.resolve();
+
+            assert.equal(bytesWritten, 50);
+
+            throttle.abort();
+
+            context.clock.tick(1000);
+
+            await Promise.resolve();
+
+            assert.equal(bytesWritten, 50);
         });
     });
 });

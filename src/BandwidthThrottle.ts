@@ -22,7 +22,7 @@ class BandwidthThrottle extends Transform {
      * for testing to confirm output rate.
      */
 
-    public onBytesWritten: Callback | null = null;
+    public onBytesWritten: ((chunk: Buffer) => void) | null = null;
     public id = '';
 
     private pendingBytesQueue: number[] = [];
@@ -30,8 +30,8 @@ class BandwidthThrottle extends Transform {
     private isInFlight: boolean = false;
     private handleRequestStart: CallbackWithSelf;
     private handleRequestStop: CallbackWithSelf;
+    private handleRequestDestroy: CallbackWithSelf;
     private transformCallback: Callback | null = null;
-    private flushCallback: Callback | null = null;
 
     constructor(
         /**
@@ -42,20 +42,27 @@ class BandwidthThrottle extends Transform {
         config: Readonly<Config>,
 
         /**
-         * A handler to be invoked whenever a request starts, so that
-         * the parent group can increment of the total number of
+         * A handler to be invoked whenever a request starts processing data,
+         * so that the parent group can increment of the total number of
          * requests in flight across the group.
          */
 
         handleRequestStart: CallbackWithSelf,
 
         /**
-         * A handler to be invoked whenever a request ends, so that
-         * the parent group can decrement of the total number of
-         * requests in flight across the group.
+         * A handler to be invoked whenever a request stops processing
+         * data, so that the parent group can decrement of the total
+         * number of requests in flight across the group.
          */
 
         handleRequestEnd: CallbackWithSelf,
+
+        /**
+         * A handler to be invoked when a request has finished processing all
+         * data for a request, and the throttle is no longer needed.
+         */
+
+        handleRequestDestroy: CallbackWithSelf,
 
         /**
          * A unique ID for the throttle, for debugging purposes.
@@ -68,7 +75,19 @@ class BandwidthThrottle extends Transform {
         this.config = config;
         this.handleRequestStart = handleRequestStart;
         this.handleRequestStop = handleRequestEnd;
+        this.handleRequestDestroy = handleRequestDestroy;
         this.id = id;
+    }
+
+    /**
+     * Informs the parent group that the throttle is no longer needed and can
+     * be released.
+     */
+
+    public destroy(): void {
+        super.destroy();
+
+        this.handleRequestDestroy(this);
     }
 
     /**
@@ -114,36 +133,13 @@ class BandwidthThrottle extends Transform {
     }
 
     /**
-     * Overwrites the derived class's `_flush` method, which is
-     * invoked internally when the final piece of data has been received
-     * by the underlying writable stream.
-     *
-     * @param done A callback to be invoked once all data has been pushed
-     *  to the underlying readable stream.
-     */
-
-    public _flush(done: Callback): void {
-        if (this.pendingBytesQueue.length === 0) {
-            done();
-
-            this.destroy();
-
-            return;
-        }
-
-        // Else, store callback so that it can be called after all
-        // pending data processed
-
-        this.flushCallback = done;
-    }
-
-    /**
      * To be called when the request being throttled is aborted in
      * order to rebalance the available bandwidth.
      */
 
     public abort(): void {
         this.handleRequestStop(this);
+        this.handleRequestDestroy(this);
     }
 
     public process(maxBytesToProcess: number = Infinity): void {
@@ -153,7 +149,8 @@ class BandwidthThrottle extends Transform {
 
         this.push(bytesToPush);
 
-        if (typeof this.onBytesWritten === 'function') this.onBytesWritten();
+        if (typeof this.onBytesWritten === 'function')
+            this.onBytesWritten(bytesToPush);
 
         // If there is more data to be processed, stop here
 
@@ -169,13 +166,6 @@ class BandwidthThrottle extends Transform {
         this.handleRequestStop(this);
 
         this.isInFlight = false;
-
-        if (!this.flushCallback) return;
-
-        // If the writing of data has ended and flush has already been
-        // called, invoke the flush callback and signal request end
-
-        this.flushCallback();
 
         this.destroy();
     }

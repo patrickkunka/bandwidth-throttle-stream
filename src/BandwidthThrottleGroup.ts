@@ -35,6 +35,7 @@ class BandwidthThrottleGroup {
         this.createBandwidthThrottle = this.createBandwidthThrottle.bind(this);
         this.handleRequestStop = this.handleRequestStop.bind(this);
         this.handleRequestStart = this.handleRequestStart.bind(this);
+        this.handleRequestDestroy = this.handleRequestDestroy.bind(this);
         this.processInFlightRequests = this.processInFlightRequests.bind(this);
     }
 
@@ -55,6 +56,7 @@ class BandwidthThrottleGroup {
             this.config,
             this.handleRequestStart,
             this.handleRequestStop,
+            this.handleRequestDestroy,
             id
         );
 
@@ -107,11 +109,26 @@ class BandwidthThrottleGroup {
         if (this.inFlightRequests.length === 0) this.stopClock();
     }
 
+    /**
+     * Releases a destroyed throttle from memory.
+     */
+
+    private handleRequestDestroy(bandwidthThrottle: BandwidthThrottle): void {
+        this.bandwidthThrottles.splice(
+            this.bandwidthThrottles.indexOf(bandwidthThrottle),
+            1
+        );
+    }
+
+    /**
+     * Starts the "clock" ensuring that all incoming data will be processed at
+     * a constant rate, defined by `config.resolutionHz`.
+     */
+
     private startClock(): NodeJS.Timeout {
         // NB: We iterate at a rate 5x faster than the desired tick duration.
-        // This ensures greater accuracy of throttling and forces the
-        // throttling to stay in sync, should the JavaScript timer become
-        // delayed due to other thread-blocking processes.
+        // This seems to greatly increase the likelyhood of the actual ticks
+        // occuring at the intended time.
 
         return setInterval(
             this.processInFlightRequests,
@@ -119,10 +136,12 @@ class BandwidthThrottleGroup {
         );
     }
 
-    private stopClock(): void {
-        if (!this.clockIntervalId) return;
+    /**
+     * Stops the clock and resets counters while no requests are active.
+     */
 
-        clearInterval(this.clockIntervalId);
+    private stopClock(): void {
+        clearInterval(this.clockIntervalId!);
 
         this.clockIntervalId = null;
         this.tickIndex = 0;
