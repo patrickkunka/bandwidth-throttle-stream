@@ -19,8 +19,8 @@ const divideIntegerIntoWholeParts = (
     const r = value % partsCount;
 
     return [
-        [r, d + 1], // distribute remainder `r` between `r` * `d + 1` values
-        [partsCount - r, d] // fill all other indicides with d
+        [partsCount - r, d], // fill all other indicides with d,
+        [r, r > 0 ? d + 1 : 0] // distribute any remainder `r` between `r` * `d + 1` values
     ];
 };
 
