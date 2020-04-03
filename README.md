@@ -19,7 +19,8 @@ const bandwidthThrottleGroup = createBandwidthThrottleGroup({
 
 const throttle = bandwidthThrottleGroup.createBandwidthThrottle();
 
-// Throttle the response by piping a readable stream to a writable stream via the throtle
+// Throttle the response by piping a readable stream to a writable
+// stream via the throttle
 
 request
     .pipe(throttle)
