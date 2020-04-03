@@ -142,6 +142,11 @@ class BandwidthThrottle extends Transform {
         this.handleRequestDestroy(this);
     }
 
+    /**
+     * Extracts a number of bytes from the pending bytes queue and
+     * pushes it out to a piped writable stream.
+     */
+
     public process(maxBytesToProcess: number = Infinity): void {
         const bytesToPush = Buffer.from(
             this.pendingBytesQueue.splice(0, maxBytesToProcess)
