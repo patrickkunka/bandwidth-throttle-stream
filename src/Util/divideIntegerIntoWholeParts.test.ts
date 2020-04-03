@@ -45,7 +45,7 @@ const testCases: ITestCase[] = [
     }
 ];
 
-describe.only('divideIntegerIntoWholeParts()', () => {
+describe('divideIntegerIntoWholeParts()', () => {
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, () => {
             const output = divideIntegerIntoWholeParts(
