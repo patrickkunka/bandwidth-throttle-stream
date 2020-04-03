@@ -19,7 +19,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
-    - run: npm test:cover
+    - run: npm run test:cover
     - run: npm run build
       env:
         CI: true
