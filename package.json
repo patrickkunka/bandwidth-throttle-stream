@@ -18,7 +18,8 @@
         "test": "TS_NODE_PROJECT=./tsconfig.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
-        "build": "rm -rf dist && tsc -p ./config/typescript/tsconfig.build.json"
+        "build": "rm -rf dist && tsc -p ./config/typescript/tsconfig.build.json",
+        "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./src/**/*.ts\""
     },
     "husky": {
         "hooks": {
