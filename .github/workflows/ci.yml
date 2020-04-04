@@ -30,7 +30,7 @@ jobs:
       run: npm run build
 
     - name: Publish
-      if: github.event_name == 'push' && "! contains(toJSON(github.event.commits.*.message), '[ci skip]')"
+      if: "github.event_name == 'push' && ! contains(toJSON(github.event.commits.*.message), '[ci skip]')"
       run: npm publish --access public
       env:
         NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
