@@ -11,6 +11,7 @@ A Node.js transform stream for throttling bandwidth which distributes available 
 - Abortable requests ensure bandwidth is redistributed if a client aborts a request
 
 #### Contents
+- [Installation](#installation)
 - [Usage](#usage)
     - [Creating a Group](#creating-a-group)
     - [Attaching Throttles](#attaching-throttles)
@@ -19,6 +20,20 @@ A Node.js transform stream for throttling bandwidth which distributes available 
 - [Dynamic Configuration](#dynamic-configuration)
 - [Aborting Requests](#aborting-requests)
 - [Destroying Requests](#destroying-requests)
+
+## Installation
+
+Firstly, install the package using your package manager of choice.
+
+```
+npm install bandwidth-throttle-stream
+```
+
+You may then import the `createBandwidthThrottleGroup()` factory function into your project.
+
+```js
+import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
+```
 
 ## Usage
 
