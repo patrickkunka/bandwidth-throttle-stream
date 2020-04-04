@@ -7,19 +7,29 @@ on:
     branches: [ master ]
 
 jobs:
+
   build:
+    name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [12.x]
     steps:
+
     - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
+
+    - name: Install Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm run test:cover
-    - run: npm run build
-      env:
-        CI: true
+        node-version: 12.x
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Test
+      run: npm run test:cover
+
+    - name: Build
+      run: npm run build
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
