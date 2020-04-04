@@ -1,4 +1,4 @@
-![CI](https://github.com/patrickkunka/bandwidth-throttle-stream/workflows/CI/badge.svg)
+![CI](https://github.com/patrickkunka/bandwidth-throttle-stream/workflows/CI/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/patrickkunka/bandwidth-throttle-stream/badge.svg?branch=master)](https://coveralls.io/github/patrickkunka/bandwidth-throttle-stream?branch=master)
 
 # Bandwidth Throttle Stream
 
