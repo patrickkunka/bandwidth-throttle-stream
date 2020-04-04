@@ -29,6 +29,12 @@ jobs:
     - name: Build
       run: npm run build
 
+    - name: Publish
+      if: github.event_name == 'push'
+      run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:

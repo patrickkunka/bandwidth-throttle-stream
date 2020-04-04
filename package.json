@@ -1,9 +1,19 @@
 {
     "name": "bandwidth-throttle-stream",
     "version": "0.1.0",
-    "description": "",
-    "private": true,
+    "description": "A Node.js transform stream for throttling bandwidth",
+    "author": "KunkaLabs Limited",
+    "private": false,
+    "license": "Apache-2.0",
     "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/patrickkunka/bandwidth-throttle-stream/"
+    },
     "scripts": {
         "test": "TS_NODE_PROJECT=./tsconfig.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
@@ -47,8 +57,5 @@
         "tslint": "5.20.1",
         "tslint-eslint-rules": "5.4.0",
         "typescript": "3.7.4"
-    },
-    "dependencies": {
-        "audit": "0.0.6"
     }
 }
