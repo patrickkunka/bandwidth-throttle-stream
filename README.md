@@ -100,7 +100,7 @@ Each bandwidth throttle group accepts an optional object of configuration option
 ```js
 const bandwidthThrottleGroup = createBandwidthThrottleGroup({
     bytesPerSecond: 500000 // 500KB/s,
-    resolutionHz: 20 // aim to write output 20x per second
+    ticksPerSecond: 20 // aim to write output 20x per second
 });
 ```
 
