@@ -2,19 +2,26 @@ interface IConfig {
     /**
      * The maximum number of bytes allowed to pass through the
      * throttle, each second.
+     *
+     * @default Infinity
      */
 
     bytesPerSecond?: number;
 
     /**
      * Defines how frequently the processing of bytes should be
-     * distributed across each second.
+     * distributed across each second. Each time the internal
+     * scheduler "ticks", data will be processed and written out.
      *
-     * A higher resolution will ensure smoother throttling, but
-     * will be more expensive computationally.
+     * A higher value will ensure smoother throttling for requests
+     * that complete within a second, but will be more expensive
+     * computationally and will ultimately be constrained by the
+     * performance of the JavaScript runtime.
+     *
+     * @default 40
      */
 
-    resolutionHz?: number;
+    ticksPerSecond?: number;
 }
 
 export default IConfig;

@@ -2,7 +2,7 @@
 
 # Bandwidth Throttle Stream
 
-A Node.js transform stream for throttling bandwidth which distributes available bandwidth evenly between all requests in a "group", accurately simulating the effect of network conditions on simultaneous overlapping requests.
+A Node.js [transform stream](https://nodejs.org/api/stream.html) for throttling bandwidth which distributes available bandwidth evenly between all requests in a "group", accurately simulating the effect of network conditions on simultaneous overlapping requests.
 
 #### Features
 - Idiomatic pipeable Node.js transform stream API
@@ -51,13 +51,13 @@ const bandwidthThrottleGroup = createBandwidthThrottleGroup({
 });
 ```
 
-Typically we would only create a single group for a server running a simulation, which all requests to be throttled are routed through, but could also create multiple groups if we wanted to run multiple simulations with different configurations through the same server.
+Typically we would create a single group only for a server running a simulation, which all incoming network requests to be throttled are routed through. However, we could also create multiple groups if we wanted to run multiple simulations with different configurations on a single server.
 
 #### Attaching Throttles
 
 Once we've created a group, we can then attach individual pipeable "throttles" to it, as requests come into our server.
 
-Typically, we would insert a throttle in between a readable stream (e.g file system readout, HTTP response), and the response stream of the incoming request to be throttled.
+The most simple integration would be to insert the throttle (via `.pipe`) between a readable stream (e.g file system readout, server-side HTTP response), and the response stream of the incoming client request to be throttled.
 
 ```js
 // Attach a throttle to a group (e.g. in response to an incoming request)
@@ -75,7 +75,7 @@ someReadableStream
 
 #### Handling Output
 
-In most cases, we need more granular control of data output than simply piping to a writable stream (for example when throttling an HTTP request).
+In most cases however, we require more granular control of data output than simply piping to a writable stream (for example when throttling an HTTP request).
 
 In these cases, we can use any of the Node.js stream events available such as `data` and `end`:
 
@@ -119,19 +119,19 @@ interface IConfig {
 
     /**
      * Defines how frequently the processing of bytes should be
-     * distributed across each second.
+     * distributed across each second. Each time the internal
+     * scheduler "ticks", data will be processed and written out.
      *
-     * A higher resolution will ensure smoother throttling, but
-     * will be more expensive computationally and will be constrained
-     * by the performance of the javascript runtime.
+     * A higher value will ensure smoother throttling for requests
+     * that complete within a second, but will be more expensive
+     * computationally and will ultimately be constrained by the
+     * performance of the JavaScript runtime.
      *
      * @default 40
      */
 
-    resolutionHz?: number;
+    ticksPerSecond?: number;
 }
-
-export default IConfig;
 ```
 
 ## Dynamic Configuration

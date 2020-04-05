@@ -2,14 +2,14 @@ import IConfig from './Interfaces/IConfig';
 
 class Config implements IConfig {
     public bytesPerSecond: number = Infinity;
-    public resolutionHz: number = 40;
+    public ticksPerSecond: number = 40;
 
     public get isThrottled(): boolean {
         return this.bytesPerSecond < Infinity;
     }
 
     public get tickDurationMs(): number {
-        return 1000 / this.resolutionHz;
+        return 1000 / this.ticksPerSecond;
     }
 }
 

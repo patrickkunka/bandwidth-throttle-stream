@@ -179,7 +179,7 @@ class BandwidthThrottleGroup {
 
             const bytesPerRequestPerTick = getPartitionedIntegerPartAtIndex(
                 bytesPerRequestPerSecond,
-                this.config.resolutionHz,
+                this.config.ticksPerSecond,
                 this.tickIndex
             );
 
@@ -195,7 +195,7 @@ class BandwidthThrottleGroup {
         // Increment the tick index, or reset it to 0 whenever it surpasses
         // the desired resolution
 
-        if (this.tickIndex === this.config.resolutionHz) {
+        if (this.tickIndex === this.config.ticksPerSecond) {
             this.tickIndex = 0;
             this.secondIndex++;
         }
