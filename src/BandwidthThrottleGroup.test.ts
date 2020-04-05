@@ -282,16 +282,16 @@ describe('BandwidthThrottleGroup', () => {
         it('allows the group to be reconfigured after instantiation', () => {
             const throttleGroup = createBandwidthThrottleGroup({
                 bytesPerSecond: 500,
-                resolutionHz: 40
+                ticksPerSecond: 40
             });
 
             throttleGroup.configure({
                 bytesPerSecond: 250,
-                resolutionHz: 20
+                ticksPerSecond: 20
             });
 
             assert.equal(throttleGroup.config.bytesPerSecond, 250);
-            assert.equal(throttleGroup.config.resolutionHz, 20);
+            assert.equal(throttleGroup.config.ticksPerSecond, 20);
         });
     });
 
