@@ -14,7 +14,7 @@
         "declaration": true,
         "baseUrl": "./",
         "paths": {
-            "@platform": ["../../src/Platform/index.node"]
+            "@Platform": ["../../src/Platform/index.node"]
         },
         "plugins": [
             {

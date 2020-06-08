@@ -1,4 +1,4 @@
-import {BaseTransformStream} from '@platform';
+import {BaseTransformStream} from '@Platform';
 
 import Config from './Config';
 import CallbackWithSelf from './Types/CallbackWithSelf';
