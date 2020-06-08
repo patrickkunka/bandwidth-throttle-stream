@@ -11,6 +11,10 @@
         "noUnusedLocals": true,
         "downlevelIteration": true,
         "experimentalDecorators": true,
-        "declaration": true
-    }
+        "declaration": true,
+        "baseUrl": "./",
+        "paths": {
+            "@platform": ["../../src/Platform/index.node"]
+        },
+    },
 }

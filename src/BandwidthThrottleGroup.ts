@@ -24,6 +24,14 @@ class BandwidthThrottleGroup {
     private tickIndex: number = 0;
     private secondIndex: number = 0;
 
+    private get hasTicked(): boolean {
+        return this.lastTickTime > -1;
+    }
+
+    private get isTicking(): boolean {
+        return this.clockIntervalId !== null;
+    }
+
     /**
      * @param options Consumer-provided options defining the
      *  throttling behaviour.
@@ -47,17 +55,16 @@ class BandwidthThrottleGroup {
      * Creates and returns a pipeable `BandwidthThrottle` transform stream,
      * and attaches it to the group.
      *
-     * @param id An optional unique ID for the throttle, for
-     *  logging purposes.
+     * @param contentLength The total number of bytes for the request to be throttled.
      */
 
-    public createBandwidthThrottle(id?: string): BandwidthThrottle {
+    public createBandwidthThrottle(contentLength: number): BandwidthThrottle {
         const bandwidthThrottle = new BandwidthThrottle(
             this.config,
+            contentLength,
             this.handleRequestStart,
             this.handleRequestStop,
-            this.handleRequestDestroy,
-            id
+            this.handleRequestDestroy
         );
 
         this.bandwidthThrottles.push(bandwidthThrottle);
@@ -155,17 +162,34 @@ class BandwidthThrottleGroup {
     private processInFlightRequests(): void {
         // Check the time since data was last processed
 
-        const elapsedTime = Date.now() - this.lastTickTime;
+        const now = Date.now();
+        const elapsedTime = this.hasTicked ? now - this.lastTickTime : 0;
 
-        // If throttling active and the time elapsed is less than
-        // the provided interval duration, do nothing.
+        // If throttling active and not the first tick and
+        // the time elapsed is less than the provided interval
+        // duration, do nothing.
 
-        if (this.config.isThrottled && elapsedTime < this.config.tickDurationMs)
+        if (
+            this.config.isThrottled &&
+            this.hasTicked &&
+            elapsedTime < this.config.tickDurationMs
+        )
             return;
 
+        // If we have not achieved our `tickDurationMs` goal, then create a multiplier
+        // to augment the amount of data sent for the tick, proportional to the delay
+
+        const delayMultiplier = Math.max(
+            1,
+            elapsedTime / this.config.tickDurationMs
+        );
         const period = this.secondIndex % this.inFlightRequests.length;
 
         for (let i = 0; i < this.inFlightRequests.length; i++) {
+            // Step 1 - evenly destribute bytes between active requests. If cannot
+            // be evenly divided, use per second rotation to balance
+            // Step 2 - for each individual request, distribute over resolution
+
             const currentInFlightRequestsCount = this.inFlightRequests.length;
             const bandwidthThrottle = this.inFlightRequests[i];
 
@@ -183,12 +207,17 @@ class BandwidthThrottleGroup {
                 this.tickIndex
             );
 
-            bandwidthThrottle.process(bytesPerRequestPerTick);
+            bandwidthThrottle.process(bytesPerRequestPerTick * delayMultiplier);
 
             if (this.inFlightRequests.length < currentInFlightRequestsCount) {
                 i--;
             }
         }
+
+        // If the clock has been stopped because a call to `.process()`
+        // completed the last active request, then do not update state.
+
+        if (!this.isTicking) return;
 
         this.tickIndex++;
 
@@ -202,7 +231,9 @@ class BandwidthThrottleGroup {
 
         // Increment the last push time, and return
 
-        this.lastTickTime += elapsedTime;
+        this.lastTickTime = this.hasTicked
+            ? this.lastTickTime + elapsedTime
+            : now;
     }
 }
 
