@@ -2,16 +2,18 @@
 
 # Bandwidth Throttle Stream
 
-A Node.js [transform stream](https://nodejs.org/api/stream.html) for throttling bandwidth which distributes available bandwidth evenly between all requests in a "group", accurately simulating the effect of network conditions on simultaneous overlapping requests.
+A [Node.js](https://nodejs.org/en/) and [Deno](https://deno.land/) transform stream for throttling bandwidth which distributes available bandwidth evenly between all requests in a "group", accurately simulating the effect of network conditions on simultaneous overlapping requests.
 
 #### Features
-- Idiomatic pipeable Node.js transform stream API
+- Idiomatic pipeable [Transform](https://nodejs.org/api/stream.html) API for use in Node.js
+- Idiomatic pipeable [TransformStream](https://developer.mozilla.org/en-US/docs/Web/API/TransformStream) API for use in Deno
 - Distributes the desired bandwidth evenly over each second
 - Distributes the desired bandwidth evenly between all active requests
 - Abortable requests ensure bandwidth is redistributed if a client aborts a request
 
 #### Contents
-- [Installation](#installation)
+- [Node.js Installation](#nodejs-installation)
+- [Deno Installation](#deno-installation)
 - [Usage](#usage)
     - [Creating a Group](#creating-a-group)
     - [Attaching Throttles](#attaching-throttles)
@@ -21,7 +23,7 @@ A Node.js [transform stream](https://nodejs.org/api/stream.html) for throttling 
 - [Aborting Requests](#aborting-requests)
 - [Destroying Requests](#destroying-requests)
 
-## Installation
+## Node.js Installation
 
 Firstly, install the package using your package manager of choice.
 
@@ -34,6 +36,10 @@ You may then import the `createBandwidthThrottleGroup()` factory function into y
 ```js
 import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 ```
+
+## Deno Installation
+
+TBC
 
 ## Usage
 
