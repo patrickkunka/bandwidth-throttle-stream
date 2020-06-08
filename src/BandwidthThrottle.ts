@@ -144,6 +144,8 @@ class BandwidthThrottle extends BaseTransformStream {
      */
 
     public destroy(): void {
+        super.destroy();
+
         this.handleRequestDestroy(this);
     }
 

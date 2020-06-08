@@ -15,7 +15,11 @@ class BaseTransformStream extends TransformStream<Uint8Array, Uint8Array> {
     }
 
     protected push(chunk: Uint8Array): void {
-        this.controller.enqueue(chunk);
+        this.controller!.enqueue(chunk);
+    }
+
+    protected destroy(): void {
+        this.controller?.terminate();
     }
 }
 

@@ -264,7 +264,7 @@ describe('BandwidthThrottleGroup', () => {
                 assert.isAtLeast(
                     aRequestContext.endTime,
                     aRequestContext.endTick * testCase.tickIntervalMs -
-                        throttleGroup.config.tickDurationMs,
+                        throttleGroup.config.tickDurationMs * 2,
                     `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
                         testCase.tickIntervalMs}ms`
                 );
