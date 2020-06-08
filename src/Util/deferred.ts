@@ -1,4 +1,4 @@
-const stub = () => void 0;
+// @deno-types="./deferred.d.ts"
 
 interface IDeferred<T> extends Promise<T> {
     resolve: (value?: T | PromiseLike<T>) => void;
@@ -9,16 +9,13 @@ const deferred = <T>(): IDeferred<T> => {
     let methods: {
         resolve: IDeferred<T>['resolve'];
         reject: IDeferred<T>['reject'];
-    } = {
-        resolve: stub,
-        reject: stub
     };
 
     const promise = new Promise<T>((resolve, reject): void => {
         methods = {resolve, reject};
     });
 
-    return Object.assign(promise, methods);
+    return Object.assign(promise, methods!);
 };
 
 export {deferred as default, IDeferred};

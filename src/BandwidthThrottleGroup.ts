@@ -1,3 +1,7 @@
+// @deno-types="./BandwidthThrottleGroup.d.ts"
+
+import {setInterval, Timeout} from '@Platform';
+
 import BandwidthThrottle from './BandwidthThrottle';
 import Config from './Config';
 import IConfig from './Interfaces/IConfig';
@@ -19,7 +23,7 @@ class BandwidthThrottleGroup {
 
     private inFlightRequests: BandwidthThrottle[] = [];
     private bandwidthThrottles: BandwidthThrottle[] = [];
-    private clockIntervalId: NodeJS.Timeout | null = null;
+    private clockIntervalId: Timeout | null = null;
     private lastTickTime: number = -1;
     private tickIndex: number = 0;
     private secondIndex: number = 0;
@@ -132,7 +136,7 @@ class BandwidthThrottleGroup {
      * a constant rate, defined by `config.resolutionHz`.
      */
 
-    private startClock(): NodeJS.Timeout {
+    private startClock(): Timeout {
         // NB: We iterate at a rate 5x faster than the desired tick duration.
         // This seems to greatly increase the likelyhood of the actual ticks
         // occuring at the intended time.

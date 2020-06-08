@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": "../../dist/deno",
+        "target": "ESNext",
+        "module": "ESNext",
+        "paths": {
+            "@Platform": ["../../src/Platform/index.deno"]
+        }
+    },
+    "include": ["../../src/**/*.ts"],
+    "exclude": [
+        "../../src/**/*.test.ts",
+        "../../src/**/*.node.ts",
+        "../../src/index.ts"
+    ]
+}

@@ -1,3 +1,5 @@
+// @deno-types="./getPartitionedIntegerPartAtIndex.d.ts"
+
 import divideIntegerIntoWholeParts from './divideIntegerIntoWholeParts';
 import evenlyDistributeSets from './evenlyDistributeSets';
 

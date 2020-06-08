@@ -1,3 +1,5 @@
+// @deno-types="./createBandwidthThrottleGroup.d.ts"
+
 import BandwidthThrottleGroup from './BandwidthThrottleGroup';
 import IConfig from './Interfaces/IConfig';
 

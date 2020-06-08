@@ -166,6 +166,17 @@ describe('BandwidthThrottleGroup', () => {
         assert.equal(bytesWritten, 100);
     });
 
+    it('should handle a request with no data', () => {
+        const throttleGroup = createBandwidthThrottleGroup();
+        const buffer = createChunkOfBytes(0);
+        const throttle = throttleGroup.createBandwidthThrottle(buffer.length);
+
+        assert.doesNotThrow(() => {
+            throttle.write(buffer);
+            throttle.end();
+        });
+    });
+
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, async () => {
             const throttleGroup = createBandwidthThrottleGroup({
@@ -235,12 +246,12 @@ describe('BandwidthThrottleGroup', () => {
                     }
                 });
 
-                await Promise.resolve();
-
                 if (tickIndex < maxTicks) {
                     // Only tick the clock if there are further iterations to be completed
 
-                    context.clock.tick(testCase.tickIntervalMs);
+                    await context.clock.tickAsync(testCase.tickIntervalMs);
+                } else {
+                    await Promise.resolve();
                 }
 
                 tickIndex++;
@@ -320,17 +331,13 @@ describe('BandwidthThrottleGroup', () => {
 
             throttle.write(buffer);
 
-            context.clock.tick(1000);
-
-            await Promise.resolve();
+            await context.clock.tickAsync(1000);
 
             assert.equal(bytesWritten, 50);
 
             throttle.abort();
 
-            context.clock.tick(1000);
-
-            await Promise.resolve();
+            await context.clock.tickAsync(1000);
 
             assert.equal(bytesWritten, 50);
         });

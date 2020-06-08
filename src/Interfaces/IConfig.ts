@@ -1,3 +1,5 @@
+// @deno-types="./IConfig.d.ts"
+
 interface IConfig {
     /**
      * The maximum number of bytes allowed to pass through the

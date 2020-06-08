@@ -1,3 +1,5 @@
+// @deno-types="./Config.d.ts"
+
 import IConfig from './Interfaces/IConfig';
 
 class Config implements IConfig {

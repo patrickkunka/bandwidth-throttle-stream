@@ -1,3 +1,5 @@
+// @deno-types="./BandwidthThrottle.d.ts"
+
 import {BaseTransformStream} from '@Platform';
 
 import Config from './Config';
