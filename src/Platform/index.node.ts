@@ -1,1 +1,1 @@
-export {default as BaseTransformStream} from '../BaseTransformStream.node';
+export {default as BaseTransformStream} from '../BaseTransformStream/BaseTransformStream.node';

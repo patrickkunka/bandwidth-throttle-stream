@@ -16,5 +16,10 @@
         "paths": {
             "@platform": ["../../src/Platform/index.node"]
         },
+        "plugins": [
+            {
+                "transform": "@zerollup/ts-transform-paths"
+            }
+        ]
     },
 }

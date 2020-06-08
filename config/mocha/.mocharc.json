@@ -1,4 +1,7 @@
 {
-    "require": "ts-node/register",
+    "require": [
+        "ts-node/register",
+        "tsconfig-paths/register"
+    ],
     "watch-files": ["./src/**/*.ts"]
 }

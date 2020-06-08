@@ -155,9 +155,10 @@ class BandwidthThrottleGroup {
         this.secondIndex = 0;
     }
 
-    // step 1 - evenly destribute bytes between active requests
-    //  if cannot be evenly divided, use per second rotation to balance
-    // step 2 - for each individual request, distribute over resolution
+    /**
+     * On each tick, processes the maximum allowable amount of data
+     * through each active request.
+     */
 
     private processInFlightRequests(): void {
         // Check the time since data was last processed
