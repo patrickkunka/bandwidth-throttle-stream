@@ -38,10 +38,10 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 
 ## Deno Installation
 
-In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth-throttle-stream` are available from TBC:
+In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth-throttle-stream` are available from the [Pika](http://pika.dev) CDN:
 
 ```js
-import {createBandwidthThrottleGroup} from 'https://path/to/cdn/bandwidth-throttle-stream@0.2.0/mod.ts'
+import {createBandwidthThrottleGroup} from 'https://cdn.pika.dev/bandwidth-throttle-sream@^0.2.0/mod.ts';
 ```
 
 ## Usage
@@ -131,7 +131,7 @@ request
 
 ##### Deno example: responding to a request with a reader and a status code
 ```ts
-import {readerToDenoReader} from 'TBC';
+import {readerToDenoReader} from 'https://cdn.pika.dev/bandwidth-throttle-sream@^0.2.0/mod.ts';
 
 ...
 
