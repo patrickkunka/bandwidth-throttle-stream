@@ -64,4 +64,4 @@ const readerToDenoReader = (
     };
 };
 
-export default readerToDenoReader;
+export {readerToDenoReader as default, IDenoReader};

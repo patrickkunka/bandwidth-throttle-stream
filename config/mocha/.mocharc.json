@@ -3,5 +3,8 @@
         "ts-node/register",
         "tsconfig-paths/register"
     ],
-    "watch-files": ["./src/**/*.ts"]
+    "watch-files": [
+        "./src/**/*.ts",
+        "./tests/**/*.ts"
+    ]
 }
