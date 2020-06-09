@@ -1,11 +1,12 @@
 {
     "name": "bandwidth-throttle-stream",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "description": "A Node.js and Deno transform stream for throttling bandwidth",
     "author": "KunkaLabs Limited",
     "private": false,
     "license": "Apache-2.0",
     "main": "./dist/index.js",
+    "module": "./lib.mod.ts",
     "exports": {
         ".": "./lib/mod.ts",
         "./mod.ts": "./lib/mod.ts",
