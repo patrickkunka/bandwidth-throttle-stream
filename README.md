@@ -209,6 +209,7 @@ bandwidthThrottleGroup.configure({
 When a client aborts a requests, its important that we also abort the throttle, ensuring the group can re-balance available bandwidth correctly, and backpressure buffer memory is released.
 
 ##### Node.js example: Handling aborted requests
+
 ```js
 const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
