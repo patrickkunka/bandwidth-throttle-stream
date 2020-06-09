@@ -1,16 +1,13 @@
 {
     "extends": "./tsconfig.base.json",
     "compilerOptions": {
-        "outDir": "../../dist/node",
-        "target": "ES2015",
-        "paths": {
-            "@Platform": ["../../src/Platform/index.node"]
-        }
+        "outDir": "../../dist",
+        "target": "ES2015"
     },
     "include": ["../../src/**/*.ts"],
     "exclude": [
         "../../src/**/*.test.ts",
         "../../src/**/*.deno.ts",
-        "../../src/mod.ts"
+        "../../**/mod.ts"
     ]
 }

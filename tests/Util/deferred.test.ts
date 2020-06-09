@@ -1,6 +1,6 @@
 import {assert} from 'chai';
 
-import deferred from '../../lib/Util/deferred';
+import deferred from '../../src/Util/deferred';
 
 describe('deferred()', () => {
     it('returns a promise that can be resolved externally', async () => {

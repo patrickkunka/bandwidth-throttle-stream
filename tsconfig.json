@@ -1,7 +1,3 @@
 {
-    "extends": "./config/typescript/tsconfig.base.json",
-    "exclude": [
-        "./src/**",
-        "./lib/**/*.node.*"
-    ]
+    "extends": "./config/typescript/tsconfig.base.json"
 }

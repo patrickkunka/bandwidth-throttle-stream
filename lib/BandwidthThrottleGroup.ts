@@ -1,8 +1,7 @@
-import {setInterval, Timeout} from './Platform/mod.deno.ts';
-
 import BandwidthThrottle from './BandwidthThrottle.ts';
 import Config from './Config.ts';
 import IConfig from './Interfaces/IConfig.ts';
+import {setInterval, Timeout} from './Platform/mod.ts';
 import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex.ts';
 
 /**

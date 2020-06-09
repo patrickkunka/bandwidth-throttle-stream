@@ -1,6 +1,5 @@
-import {BaseTransformStream} from './Platform/mod.deno.ts';
-
 import Config from './Config.ts';
+import {BaseTransformStream} from './Platform/mod.ts';
 import CallbackWithSelf from './Types/CallbackWithSelf.ts';
 import deferred from './Util/deferred.ts';
 

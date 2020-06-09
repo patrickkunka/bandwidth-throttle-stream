@@ -1,6 +1,6 @@
 import {assert} from 'chai';
 
-import divideIntegerIntoWholeParts from '../../lib/Util/divideIntegerIntoWholeParts';
+import divideIntegerIntoWholeParts from '../../src/Util/divideIntegerIntoWholeParts';
 
 type TCountValueSet = [number, number];
 
