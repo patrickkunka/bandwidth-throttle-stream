@@ -49,7 +49,7 @@ class BandwidthThrottle extends BaseTransformStream {
          * allocation.
          */
 
-        contenttLength: number,
+        contentLength: number,
 
         /**
          * A handler to be invoked whenever a request starts processing data,
@@ -80,7 +80,7 @@ class BandwidthThrottle extends BaseTransformStream {
         });
 
         this.config = config;
-        this.pendingBytesBuffer = new Uint8Array(contenttLength);
+        this.pendingBytesBuffer = new Uint8Array(contentLength);
         this.handleRequestStart = handleRequestStart;
         this.handleRequestStop = handleRequestEnd;
         this.handleRequestDestroy = handleRequestDestroy;
