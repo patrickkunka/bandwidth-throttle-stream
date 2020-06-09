@@ -1,6 +1,7 @@
 .tmp
 .DS_Store
 node_modules
+src
 dist
 coverage
 .nyc_output

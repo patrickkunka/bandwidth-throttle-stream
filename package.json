@@ -1,34 +1,33 @@
 {
     "name": "bandwidth-throttle-stream",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "description": "A Node.js and Deno transform stream for throttling bandwidth",
     "author": "KunkaLabs Limited",
     "private": false,
     "license": "Apache-2.0",
-    "main": "./dist/node/index.js",
-    "module": "./dist/deno/mod.js",
+    "main": "./dist/index.js",
     "exports": {
-        ".": "./dist/deno/mod.js",
-        "./mod.ts": "./dist/deno/mod.js",
-        "./mod.js": "./dist/deno/mod.js"
+        ".": "./lib/mod.ts",
+        "./mod.ts": "./lib/mod.ts"
     },
     "files": [
-        "dist/node",
-        "dist/deno"
+        "dist",
+        "lib",
+        "!lib/**/index.ts"
     ],
     "repository": {
         "type": "git",
         "url": "https://github.com/patrickkunka/bandwidth-throttle-stream/"
     },
     "scripts": {
-        "test": "TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
+        "test": "npm run create:src && TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"./tests/**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
         "clean:dist": "rm -rf dist",
-        "build:node": "ttsc -p ./config/typescript/tsconfig.build.node.json",
-        "build:deno": "ttsc -p ./config/typescript/tsconfig.build.deno.json",
-        "build": "npm run clean:dist && npm run build:node && npm run build:deno",
-        "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./src/**/*.ts\""
+        "clean:src": "rm -rf src",
+        "create:src": "npm run clean:src && cp -a ./lib/. ./src && ts-node ./scripts/replace.ts",
+        "build": "npm run create:src && npm run clean:dist && ttsc -p ./config/typescript/tsconfig.build.json",
+        "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./lib/**/*.ts\""
     },
     "husky": {
         "hooks": {
@@ -37,13 +36,8 @@
         }
     },
     "lint-staged": {
-        "*.{ts,tsx}": [
+        "*.ts": [
             "prettier --write --config ./config/prettier/.prettierrc",
-            "git add"
-        ],
-        "*.scss": [
-            "prettier --write --config ./config/prettier/.prettierrc",
-            "stylelint --config './config/stylelint/.stylelintrc.json' --fix",
             "git add"
         ]
     },
@@ -57,6 +51,7 @@
         "@types/sinon": "9.0.4",
         "@zerollup/ts-transform-paths": "^1.7.17",
         "chai": "4.2.0",
+        "glob": "^7.1.6",
         "husky": "3.0.2",
         "lint-staged": "9.2.1",
         "mocha": "^7.1.1",
