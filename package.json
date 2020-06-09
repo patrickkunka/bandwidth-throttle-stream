@@ -6,11 +6,9 @@
     "private": false,
     "license": "Apache-2.0",
     "main": "./dist/node/index.js",
-    "module": "./dist/deno/mod.js",
     "exports": {
-        ".": "./dist/deno/mod.js",
-        "./mod.ts": "./dist/deno/mod.js",
-        "./mod.js": "./dist/deno/mod.js"
+        ".": "./dist/deno/mod.ts",
+        "./mod.ts": "./dist/deno/mod.ts"
     },
     "files": [
         "dist/node",
@@ -21,14 +19,16 @@
         "url": "https://github.com/patrickkunka/bandwidth-throttle-stream/"
     },
     "scripts": {
-        "test": "TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
+        "test": "TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"./src/**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
         "clean:dist": "rm -rf dist",
+        "clean:src": "rm -rf src",
+        "copy:src": "npm run clean:src && cp -a ./lib/. ./src && sed -i '' 's/\\.ts//g' ./src/**/*.ts",
         "build:node": "ttsc -p ./config/typescript/tsconfig.build.node.json",
         "build:deno": "ttsc -p ./config/typescript/tsconfig.build.deno.json",
         "build": "npm run clean:dist && npm run build:node && npm run build:deno",
-        "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./src/**/*.ts\""
+        "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./lib/**/*.ts\""
     },
     "husky": {
         "hooks": {
@@ -37,13 +37,8 @@
         }
     },
     "lint-staged": {
-        "*.{ts,tsx}": [
+        "*.ts": [
             "prettier --write --config ./config/prettier/.prettierrc",
-            "git add"
-        ],
-        "*.scss": [
-            "prettier --write --config ./config/prettier/.prettierrc",
-            "stylelint --config './config/stylelint/.stylelintrc.json' --fix",
             "git add"
         ]
     },

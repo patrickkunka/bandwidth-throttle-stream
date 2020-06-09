@@ -13,7 +13,7 @@
         "declaration": true,
         "baseUrl": "./",
         "paths": {
-            "@Platform": ["../../src/Platform/index.node"]
+            "@Platform": ["../../lib/Platform/mod.deno.ts"]
         },
         "plugins": [
             {

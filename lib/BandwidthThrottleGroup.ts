@@ -1,11 +1,9 @@
-// @deno-types="./BandwidthThrottleGroup.d.ts"
+import {setInterval, Timeout} from './Platform/mod.deno.ts';
 
-import {setInterval, Timeout} from '@Platform';
-
-import BandwidthThrottle from './BandwidthThrottle';
-import Config from './Config';
-import IConfig from './Interfaces/IConfig';
-import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex';
+import BandwidthThrottle from './BandwidthThrottle.ts';
+import Config from './Config.ts';
+import IConfig from './Interfaces/IConfig.ts';
+import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex.ts';
 
 /**
  * A class used to configure and bridge between one or more

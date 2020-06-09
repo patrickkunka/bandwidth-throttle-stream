@@ -1,6 +1,4 @@
-// @deno-types="./CallbackWithSelf.d.ts"
-
-import BandwidthThrottle from '../BandwidthThrottle';
+import BandwidthThrottle from '../BandwidthThrottle.ts';
 
 type CallbackWithSelf = (bandwidthThrottle: BandwidthThrottle) => void;
 

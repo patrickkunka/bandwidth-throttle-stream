@@ -1,5 +1,3 @@
-// @deno-types="./divideIntegerIntoWholeParts.d.ts"
-
 /**
  * Divides a provided integer (`value`) into `partsCount` whole parts.
  * The values of all parts may differ by at most 1 (when the number can

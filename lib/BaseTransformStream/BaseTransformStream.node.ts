@@ -1,6 +1,6 @@
 import {Transform} from 'stream';
 
-import IBaseTransformStreamConstructorParams from '../Interfaces/IBaseTransformStreamConstructorParams';
+import IBaseTransformStreamConstructorParams from '../Interfaces/IBaseTransformStreamConstructorParams.ts';
 
 class BaseTransformStream extends Transform {
     constructor({transform, flush}: IBaseTransformStreamConstructorParams) {

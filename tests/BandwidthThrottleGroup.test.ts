@@ -2,9 +2,9 @@ import {assert} from 'chai';
 import {SinonFakeTimers, SinonStub, stub, useFakeTimers} from 'sinon';
 import {Readable, Writable} from 'stream';
 
-import BandwidthThrottle from './BandwidthThrottle';
-import createBandwidthThrottleGroup from './createBandwidthThrottleGroup';
-import Callback from './Types/Callback';
+import BandwidthThrottle from '../lib/BandwidthThrottle';
+import createBandwidthThrottleGroup from '../lib/createBandwidthThrottleGroup';
+import Callback from '../lib/Types/Callback';
 
 const createChunkOfBytes = (bytes: number): Buffer =>
     Buffer.from([...Array(bytes)].map(() => 0x62));

@@ -1,5 +1,3 @@
-// @deno-types="./deferred.d.ts"
-
 interface IDeferred<T> extends Promise<T> {
     resolve: (value?: T | PromiseLike<T>) => void;
     reject: (reason?: any) => void;

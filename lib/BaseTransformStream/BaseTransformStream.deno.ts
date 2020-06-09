@@ -1,5 +1,3 @@
-// @deno-types="./BaseTransformStream.deno.d.ts"
-
 class BaseTransformStream extends TransformStream<Uint8Array, Uint8Array> {
     private controller: TransformStreamDefaultController<
         Uint8Array

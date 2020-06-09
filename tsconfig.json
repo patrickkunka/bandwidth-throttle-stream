@@ -1,6 +1,7 @@
 {
     "extends": "./config/typescript/tsconfig.base.json",
     "exclude": [
-        "./src/**/*.deno.*"
+        "./src/**",
+        "./lib/**/*.node.*"
     ]
 }

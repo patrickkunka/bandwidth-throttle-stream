@@ -1,6 +1,6 @@
 import {assert} from 'chai';
 
-import getPartitionedIntegerPartAtIndex from './getPartitionedIntegerPartAtIndex';
+import getPartitionedIntegerPartAtIndex from '../../lib/Util/getPartitionedIntegerPartAtIndex';
 
 interface ITestCase {
     value: number;

@@ -1,6 +1,4 @@
-// @deno-types="./Config.d.ts"
-
-import IConfig from './Interfaces/IConfig';
+import IConfig from './Interfaces/IConfig.ts';
 
 class Config implements IConfig {
     public bytesPerSecond: number = Infinity;

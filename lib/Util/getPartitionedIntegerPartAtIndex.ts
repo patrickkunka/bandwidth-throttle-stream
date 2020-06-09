@@ -1,7 +1,5 @@
-// @deno-types="./getPartitionedIntegerPartAtIndex.d.ts"
-
-import divideIntegerIntoWholeParts from './divideIntegerIntoWholeParts';
-import evenlyDistributeSets from './evenlyDistributeSets';
+import divideIntegerIntoWholeParts from './divideIntegerIntoWholeParts.ts';
+import evenlyDistributeSets from './evenlyDistributeSets.ts';
 
 /**
  * Returns a whole integer value of an evenly divided and evenly distributed part

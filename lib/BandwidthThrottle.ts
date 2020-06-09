@@ -1,10 +1,8 @@
-// @deno-types="./BandwidthThrottle.d.ts"
+import {BaseTransformStream} from './Platform/mod.deno.ts';
 
-import {BaseTransformStream} from '@Platform';
-
-import Config from './Config';
-import CallbackWithSelf from './Types/CallbackWithSelf';
-import deferred from './Util/deferred';
+import Config from './Config.ts';
+import CallbackWithSelf from './Types/CallbackWithSelf.ts';
+import deferred from './Util/deferred.ts';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in
