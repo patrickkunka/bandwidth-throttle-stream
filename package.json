@@ -20,7 +20,7 @@
         "url": "https://github.com/patrickkunka/bandwidth-throttle-stream/"
     },
     "scripts": {
-        "test": "TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"./tests/**/*.test.ts\" --config ./config/mocha/.mocharc.json",
+        "test": "npm run create:src && TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"./tests/**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
         "clean:dist": "rm -rf dist",
