@@ -1,24 +1,29 @@
 {
     "name": "bandwidth-throttle-stream",
-    "version": "0.1.1",
-    "description": "A Node.js transform stream for throttling bandwidth",
+    "version": "0.2.0",
+    "description": "A Node.js and Deno transform stream for throttling bandwidth",
     "author": "KunkaLabs Limited",
     "private": false,
     "license": "Apache-2.0",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/node/index.js",
+    "types": "./dist/node/index.d.ts",
+    "module": "./dist/deno/mod.js",
     "files": [
-        "dist"
+        "dist/node",
+        "dist/deno"
     ],
     "repository": {
         "type": "git",
         "url": "https://github.com/patrickkunka/bandwidth-throttle-stream/"
     },
     "scripts": {
-        "test": "TS_NODE_PROJECT=./tsconfig.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
+        "test": "TS_NODE_PROJECT=./config/typescript/tsconfig.base.json mocha \"**/*.test.ts\" --config ./config/mocha/.mocharc.json",
         "test:watch": "npm run test -- --watch",
         "test:cover": "nyc npm run test",
-        "build": "rm -rf dist && tsc -p ./config/typescript/tsconfig.build.json",
+        "clean:dist": "rm -rf dist",
+        "build:node": "ttsc -p ./config/typescript/tsconfig.build.node.json",
+        "build:deno": "ttsc -p ./config/typescript/tsconfig.build.deno.json",
+        "build": "npm run clean:dist npm run build:node && npm run build:deno",
         "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./src/**/*.ts\""
     },
     "husky": {
@@ -45,18 +50,21 @@
         "@types/chai": "4.2.2",
         "@types/mocha": "2.2.48",
         "@types/node": "12.6.8",
-        "@types/sinon": "7.0.13",
+        "@types/sinon": "9.0.4",
+        "@zerollup/ts-transform-paths": "^1.7.17",
         "chai": "4.2.0",
         "husky": "3.0.2",
         "lint-staged": "9.2.1",
         "mocha": "^7.1.1",
         "nyc": "^15.0.0",
         "prettier": "1.19.1",
-        "sinon": "7.4.2",
+        "sinon": "9.0.2",
         "ts-node": "8.3.0",
         "tsc-watch": "2.4.0",
+        "tsconfig-paths": "^3.9.0",
         "tslint": "5.20.1",
         "tslint-eslint-rules": "5.4.0",
+        "ttypescript": "^1.5.10",
         "typescript": "3.7.4"
     }
 }

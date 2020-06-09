@@ -1,3 +1,5 @@
+// @deno-types="./evenlyDistributeSets.d.ts"
+
 /**
  * Evenly distributes two sets of integers with the goal of
  * ensuring the highest distance between each occurence

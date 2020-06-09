@@ -1,8 +1,10 @@
-import {Transform} from 'stream';
+// @deno-types="./BandwidthThrottle.d.ts"
+
+import {BaseTransformStream} from '@Platform';
 
 import Config from './Config';
-import Callback from './Types/Callback';
 import CallbackWithSelf from './Types/CallbackWithSelf';
+import deferred from './Util/deferred';
 
 /**
  * A duplex stream transformer implementation, extending Node's built-in
@@ -15,23 +17,24 @@ import CallbackWithSelf from './Types/CallbackWithSelf';
  * the group, mimicing the behaviour of overlapping network requests.
  */
 
-class BandwidthThrottle extends Transform {
+class BandwidthThrottle extends BaseTransformStream {
     /**
      * A callback to be invoked when bytes are written
      * to the underlying `readable` stream. Used as a hook
      * for testing to confirm output rate.
      */
 
-    public onBytesWritten: ((chunk: Buffer) => void) | null = null;
-    public id = '';
+    public onBytesWritten: ((chunk: Uint8Array) => void) | null = null;
 
-    private pendingBytesQueue: number[] = [];
+    private pendingBytesBuffer: Uint8Array;
+    private pendingBytesCount = 0;
+    private pendingBytesReadIndex = 0;
     private config: Readonly<Config>;
     private isInFlight: boolean = false;
     private handleRequestStart: CallbackWithSelf;
     private handleRequestStop: CallbackWithSelf;
     private handleRequestDestroy: CallbackWithSelf;
-    private transformCallbacks: Callback[] = [];
+    private done = deferred<void>();
 
     constructor(
         /**
@@ -40,6 +43,13 @@ class BandwidthThrottle extends Transform {
          */
 
         config: Readonly<Config>,
+
+        /**
+         * The total number of bytes in the request to be throttled, to be used to define memory
+         * allocation.
+         */
+
+        contentLength: number,
 
         /**
          * A handler to be invoked whenever a request starts processing data,
@@ -62,45 +72,94 @@ class BandwidthThrottle extends Transform {
          * data for a request, and the throttle is no longer needed.
          */
 
-        handleRequestDestroy: CallbackWithSelf,
-
-        /**
-         * A unique ID for the throttle, for debugging purposes.
-         */
-
-        id: string = ''
+        handleRequestDestroy: CallbackWithSelf
     ) {
-        super();
+        super({
+            transform: chunk => this.transform(chunk),
+            flush: () => this.flush()
+        });
 
         this.config = config;
+        this.pendingBytesBuffer = new Uint8Array(contentLength);
         this.handleRequestStart = handleRequestStart;
         this.handleRequestStop = handleRequestEnd;
         this.handleRequestDestroy = handleRequestDestroy;
-        this.id = id;
+    }
+
+    /**
+     * To be called when the request being throttled is aborted in
+     * order to rebalance the available bandwidth.
+     */
+
+    public abort(): void {
+        this.handleRequestStop(this);
+        this.destroy();
+    }
+
+    /**
+     * Extracts a number of bytes from the pending bytes queue and
+     * pushes it out to a piped writable stream.
+     */
+
+    public process(maxBytesToProcess: number = Infinity): void {
+        const startReadIndex = this.pendingBytesReadIndex;
+
+        const endReadIndex = Math.min(
+            this.pendingBytesReadIndex + maxBytesToProcess,
+            this.pendingBytesCount
+        );
+
+        const bytesToPushLength = endReadIndex - startReadIndex;
+
+        if (bytesToPushLength > 0) {
+            const bytesToPush = this.pendingBytesBuffer.subarray(
+                startReadIndex,
+                endReadIndex
+            );
+
+            this.pendingBytesReadIndex = endReadIndex;
+
+            this.push(bytesToPush);
+
+            if (typeof this.onBytesWritten === 'function') {
+                this.onBytesWritten(bytesToPush);
+            }
+        }
+
+        // If there is more data to be processed, stop here
+
+        if (this.pendingBytesReadIndex < this.pendingBytesCount) return;
+
+        // If there are no other promises at this point
+        // we can consider the request inactive.
+
+        this.done.resolve();
+
+        this.handleRequestStop(this);
+        this.destroy();
+
+        this.isInFlight = false;
     }
 
     /**
      * Informs the parent group that the throttle is no longer needed and can
-     * be released.
+     * be released. Once a throttle is destroyed, it can not be used again.
      */
 
     public destroy(): void {
-        super.destroy();
-
         this.handleRequestDestroy(this);
+
+        super.destroy();
     }
 
     /**
-     * Overwrites the derived class's `_transform` method, which is
-     * invoked internally whenever data is received from the underlying
-     * writeable stream.
+     * Invoked internally whenever data is received from the underlying
+     * writeable stream. Resolves a promise when done.
      *
-     * @param chunk A chunk of data in the form of a buffer of arbitrary length.
-     * @param _ The type of encoding (not used)
-     * @param done A callback to be invoked once the incoming data has been processed.
+     * @param chunk A chunk of data in the form of a typed array of arbitrary length.
      */
 
-    public _transform(chunk: Buffer, _, done: Callback): void {
+    private transform(chunk: Uint8Array): void {
         if (!this.isInFlight) {
             // If this is the first chunk of data to be processed, or
             // if is processing was previously paused due to a lack of
@@ -111,73 +170,25 @@ class BandwidthThrottle extends Transform {
             this.isInFlight = true;
         }
 
-        // Iterate through and each byte of the incoming chunk, and push
-        // each one into the queue
+        this.pendingBytesBuffer.set(chunk, this.pendingBytesCount);
 
-        for (const byte of chunk) {
-            this.pendingBytesQueue.push(byte);
-        }
+        // Copy chunk data into queue and increment total queued bytes length
+
+        this.pendingBytesCount += chunk.length;
 
         // If no throttling is applied, avoid any initial latency by immediately
         // processing the queue on the next frame.
 
-        if (!this.config.isThrottled) {
-            this.process();
-
-            done();
-
-            return;
-        }
-
-        this.transformCallbacks.push(done);
+        if (!this.config.isThrottled) this.process();
     }
 
     /**
-     * To be called when the request being throttled is aborted in
-     * order to rebalance the available bandwidth.
+     * Invoked once all data has been passed to the stream, and resolving a promise
+     * when all data has been processed.
      */
 
-    public abort(): void {
-        this.handleRequestStop(this);
-        this.handleRequestDestroy(this);
-    }
-
-    /**
-     * Extracts a number of bytes from the pending bytes queue and
-     * pushes it out to a piped writable stream.
-     */
-
-    public process(maxBytesToProcess: number = Infinity): void {
-        const bytesToPush = Buffer.from(
-            this.pendingBytesQueue.splice(0, maxBytesToProcess)
-        );
-
-        this.push(bytesToPush);
-
-        if (typeof this.onBytesWritten === 'function')
-            this.onBytesWritten(bytesToPush);
-
-        // If there is more data to be processed, stop here
-
-        if (this.pendingBytesQueue.length > 0) return;
-
-        // No data left to be processed, call the first
-        // callback in the queue
-
-        if (this.transformCallbacks.length > 0)
-            this.transformCallbacks.shift()!();
-
-        // This may result in other queued data being passed to
-        // `_transform`, and other callbacks being pushed.
-
-        if (this.transformCallbacks.length > 0) return;
-
-        // If there are no other callbacks at this point
-        // we can consider the request inactive.
-
-        this.handleRequestStop(this);
-
-        this.isInFlight = false;
+    private async flush(): Promise<void> {
+        if (this.pendingBytesCount > 0) return this.done;
     }
 }
 

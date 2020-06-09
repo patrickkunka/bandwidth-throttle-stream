@@ -121,8 +121,10 @@ describe('BandwidthThrottleGroup', () => {
             const throttleGroup = createBandwidthThrottleGroup({
                 bytesPerSecond: 100
             });
-            const throttle = throttleGroup.createBandwidthThrottle();
             const buffer = createChunkOfBytes(100);
+            const throttle = throttleGroup.createBandwidthThrottle(
+                buffer.length
+            );
 
             await new Promise(resolve => {
                 throttle.on('data', () => void 0).on('end', resolve);
@@ -141,9 +143,11 @@ describe('BandwidthThrottleGroup', () => {
         const throttleGroup = createBandwidthThrottleGroup({
             bytesPerSecond: 100
         });
-        const throttle = throttleGroup.createBandwidthThrottle();
         const bufferA = createChunkOfBytes(50);
         const bufferB = createChunkOfBytes(50);
+        const throttle = throttleGroup.createBandwidthThrottle(
+            bufferA.length + bufferB.length
+        );
 
         let bytesWritten = 0;
 
@@ -160,6 +164,15 @@ describe('BandwidthThrottleGroup', () => {
         });
 
         assert.equal(bytesWritten, 100);
+    });
+
+    it('should handle a request with no data', () => {
+        const throttleGroup = createBandwidthThrottleGroup();
+        const throttle = throttleGroup.createBandwidthThrottle(0);
+
+        assert.doesNotThrow(() => {
+            throttle.end();
+        });
     });
 
     testCases.forEach((testCase, testCaseIndex) => {
@@ -187,7 +200,9 @@ describe('BandwidthThrottleGroup', () => {
                 const totalTicks = request.timeline.length;
                 const startTick = Math.max(0, request.timeline.indexOf('='));
                 const endTick = request.timeline.lastIndexOf('=') + 1;
-                const throttle = throttleGroup.createBandwidthThrottle();
+                const throttle = throttleGroup.createBandwidthThrottle(
+                    request.bytes
+                );
                 const inputStream = new Readable({read: () => void 0});
                 const outputStream = new Writable({write: outputStub});
 
@@ -217,7 +232,7 @@ describe('BandwidthThrottleGroup', () => {
             let tickIndex = 0;
 
             do {
-                requestContexts.forEach((aRequestContext, requestIndex) => {
+                requestContexts.forEach(aRequestContext => {
                     if (aRequestContext.startTick === tickIndex) {
                         // Data write start
 
@@ -229,12 +244,12 @@ describe('BandwidthThrottleGroup', () => {
                     }
                 });
 
-                await Promise.resolve();
-
                 if (tickIndex < maxTicks) {
                     // Only tick the clock if there are further iterations to be completed
 
-                    context.clock.tick(testCase.tickIntervalMs);
+                    await context.clock.tickAsync(testCase.tickIntervalMs);
+                } else {
+                    await Promise.resolve();
                 }
 
                 tickIndex++;
@@ -258,7 +273,7 @@ describe('BandwidthThrottleGroup', () => {
                 assert.isAtLeast(
                     aRequestContext.endTime,
                     aRequestContext.endTick * testCase.tickIntervalMs -
-                        throttleGroup.config.tickDurationMs,
+                        throttleGroup.config.tickDurationMs * 2,
                     `expected request ${requestIndex} to complete within ${aRequestContext.endTick *
                         testCase.tickIntervalMs}ms`
                 );
@@ -269,8 +284,10 @@ describe('BandwidthThrottleGroup', () => {
     describe('.destroy()', () => {
         it('destroys all throttles attached to a group such that they can not be used', () => {
             const throttleGroup = createBandwidthThrottleGroup();
-            const throttle = throttleGroup.createBandwidthThrottle();
             const buffer = createChunkOfBytes(100);
+            const throttle = throttleGroup.createBandwidthThrottle(
+                buffer.length
+            );
 
             throttleGroup.destroy();
 
@@ -301,8 +318,10 @@ describe('BandwidthThrottleGroup', () => {
                 bytesPerSecond: 50
             });
 
-            const throttle = throttleGroup.createBandwidthThrottle();
             const buffer = createChunkOfBytes(100);
+            const throttle = throttleGroup.createBandwidthThrottle(
+                buffer.length
+            );
 
             let bytesWritten = 0;
 
@@ -310,17 +329,13 @@ describe('BandwidthThrottleGroup', () => {
 
             throttle.write(buffer);
 
-            context.clock.tick(1000);
-
-            await Promise.resolve();
+            await context.clock.tickAsync(1000);
 
             assert.equal(bytesWritten, 50);
 
             throttle.abort();
 
-            context.clock.tick(1000);
-
-            await Promise.resolve();
+            await context.clock.tickAsync(1000);
 
             assert.equal(bytesWritten, 50);
         });
