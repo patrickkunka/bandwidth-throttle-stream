@@ -1,6 +1,6 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import * as glob from 'glob';
+import * as path from 'path';
 
 /**
  * Replaces patterns in deno `lib` code to create tsc compatible `src` code
@@ -11,16 +11,17 @@ const SRC_PATH = path.join(ROOT_PATH, 'src');
 const SRC_PATTERN = path.join(SRC_PATH, '**/*.ts');
 const paths = glob.sync(SRC_PATTERN);
 
-const replacements: [RegExp, string][] = [
-    [/\.ts/g, ''],
-    [/'[\./]+Platform\/[\w\.]+'/g, "'@Platform'"]
+const replacements: Array<[RegExp, string]> = [
+    [/\.ts/g, ''], // remove all `.ts` file extensions
+    [/'[\./]+Platform\/[\w\.]+'/g, '"@Platform"'] // replace all references to the deno platform entry point with alias
 ];
 
 const replaced: string[] = paths
-    .map((path: string) => fs.readFileSync(path, 'utf8'))
+    .map((modulePath: string) => fs.readFileSync(modulePath, 'utf8'))
     .map((code: string) =>
         replacements.reduce(
-            (code, [re, replacement]) => code.replace(re, replacement),
+            (codeUnderReplacement, [re, replacement]) =>
+                codeUnderReplacement.replace(re, replacement),
             code
         )
     );
