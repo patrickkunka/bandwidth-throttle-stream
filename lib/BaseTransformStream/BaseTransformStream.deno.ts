@@ -1,9 +1,11 @@
+import IBaseTransformStreamConstructorParams from '../Interfaces/IBaseTransformStreamConstructorParams.ts';
+
 class BaseTransformStream extends TransformStream<Uint8Array, Uint8Array> {
     private controller: TransformStreamDefaultController<
         Uint8Array
     > | null = null;
 
-    constructor({transform, flush}) {
+    constructor({transform, flush}: IBaseTransformStreamConstructorParams) {
         super({
             transform: (chunk, controller) => {
                 this.controller = controller;

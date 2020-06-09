@@ -72,7 +72,7 @@ class BandwidthThrottle extends BaseTransformStream {
         handleRequestDestroy: CallbackWithSelf
     ) {
         super({
-            transform: chunk => this.transform(chunk),
+            transform: (chunk: Uint8Array) => this.transform(chunk),
             flush: () => this.flush()
         });
 
