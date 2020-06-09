@@ -1,6 +1,6 @@
 {
     "name": "bandwidth-throttle-stream",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "A Node.js and Deno transform stream for throttling bandwidth",
     "author": "KunkaLabs Limited",
     "private": false,
@@ -23,7 +23,7 @@
         "clean:dist": "rm -rf dist",
         "build:node": "ttsc -p ./config/typescript/tsconfig.build.node.json",
         "build:deno": "ttsc -p ./config/typescript/tsconfig.build.deno.json",
-        "build": "npm run clean:dist npm run build:node && npm run build:deno",
+        "build": "npm run clean:dist && npm run build:node && npm run build:deno",
         "lint": "tslint --project tsconfig.json -c ./config/tslint/tslint.json \"./src/**/*.ts\""
     },
     "husky": {

@@ -41,7 +41,13 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth-throttle-stream` are available from the [Pika](http://pika.dev) CDN:
 
 ```js
-import {createBandwidthThrottleGroup} from 'https://cdn.pika.dev/bandwidth-throttle-sream@^0.2.0/mod.ts';
+import {createBandwidthThrottleGroup} from 'https://cdn.pika.dev/bandwidth-throttle-sream/mod.ts';
+```
+
+The above URL will return the latest release, but it is strongly advised to lock your import to a specific version using the following syntax, where `.x.y.z` can be any published version of the library:
+
+```js
+import {createBandwidthThrottleGroup} from 'https://cdn.pika.dev/bandwidth-throttle-sream@x.y.z/mod.ts';
 ```
 
 ## Usage

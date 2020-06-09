@@ -2,7 +2,7 @@
     "extends": "./tsconfig.base.json",
     "compilerOptions": {
         "outDir": "../../dist/deno",
-        "target": "ESNext",
+        "target": "ES2019",
         "module": "ESNext",
         "paths": {
             "@Platform": ["../../src/Platform/index.deno"]
