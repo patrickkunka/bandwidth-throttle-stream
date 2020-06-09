@@ -12,7 +12,8 @@
     },
     "files": [
         "dist",
-        "lib"
+        "lib",
+        "!lib/**/index.ts"
     ],
     "repository": {
         "type": "git",
