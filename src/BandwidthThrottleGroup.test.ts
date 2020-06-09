@@ -168,11 +168,9 @@ describe('BandwidthThrottleGroup', () => {
 
     it('should handle a request with no data', () => {
         const throttleGroup = createBandwidthThrottleGroup();
-        const buffer = createChunkOfBytes(0);
-        const throttle = throttleGroup.createBandwidthThrottle(buffer.length);
+        const throttle = throttleGroup.createBandwidthThrottle(0);
 
         assert.doesNotThrow(() => {
-            throttle.write(buffer);
             throttle.end();
         });
     });

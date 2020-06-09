@@ -93,7 +93,7 @@ class BandwidthThrottle extends BaseTransformStream {
 
     public abort(): void {
         this.handleRequestStop(this);
-        this.handleRequestDestroy(this);
+        this.destroy();
     }
 
     /**
@@ -136,19 +136,20 @@ class BandwidthThrottle extends BaseTransformStream {
         this.done.resolve();
 
         this.handleRequestStop(this);
+        this.destroy();
 
         this.isInFlight = false;
     }
 
     /**
      * Informs the parent group that the throttle is no longer needed and can
-     * be released.
+     * be released. Once a throttle is destroyed, it can not be used again.
      */
 
     public destroy(): void {
-        super.destroy();
-
         this.handleRequestDestroy(this);
+
+        super.destroy();
     }
 
     /**

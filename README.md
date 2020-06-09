@@ -20,8 +20,7 @@ A [Node.js](https://nodejs.org/en/) and [Deno](https://deno.land/) transform str
     - [Handling Output](#handling-output)
 - [Configuration Options](#configuration-options)
 - [Dynamic Configuration](#dynamic-configuration)
-- [Aborting Requests](#aborting-requests)
-- [Destroying Requests](#destroying-requests)
+- [Aborted Requests](#aborted-requests)
 
 ## Node.js Installation
 
@@ -39,17 +38,19 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 
 ## Deno Installation
 
-TBC
+In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth-throttle-stream` are available from TBC:
+
+```js
+import {createBandwidthThrottleGroup} from 'https://path/to/cdn/bandwidth-throttle-stream@0.2.0/mod.ts'
+```
 
 ## Usage
 
 #### Creating a Group
 
-We must firstly create a "bandwidth throttle group" which will be configured with a specific throughput in bytes (B) per second.
+Using the imported `createBandwidthThrottleGroup` factory function, we must firstly create a "bandwidth throttle group" which will be configured with a specific throughput in bytes (B) per second.
 
 ```js
-import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
-
 // Create a group with a configured available bandwidth in bytes (B) per second.
 
 const bandwidthThrottleGroup = createBandwidthThrottleGroup({
@@ -63,20 +64,50 @@ Typically we would create a single group only for a server running a simulation,
 
 Once we've created a group, we can then attach individual pipeable "throttles" to it, as requests come into our server.
 
-The most simple integration would be to insert the throttle (via `.pipe`) between a readable stream (e.g file system readout, server-side HTTP response), and the response stream of the incoming client request to be throttled.
+The most simple integration would be to insert the throttle (via `.pipe`, or `.pipeThrough`) between a readable stream (e.g file system readout, server-side HTTP response), and the response stream of the incoming client request to be throttled.
 
+##### Node.js example: Piping between readable and writable streams
 ```js
 // Attach a throttle to a group (e.g. in response to an incoming request)
 
-const throttle = bandwidthThrottleGroup.createBandwidthThrottle();
+const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
-// Throttle the response by piping a readable stream to a writable
-// stream via the throttle
+// Throttle the response by piping a `stream.Readable` to a `stream.Writable`
+// via the throttle
 
 someReadableStream
     .pipe(throttle)
     .pipe(someWritableStream);
 
+```
+
+#### Deno example: Piping between a readable stream and a reader:
+```ts
+// Attach a throttle to a group (e.g. in response to an incoming request)
+
+const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
+
+// Throttle the response by piping a `ReadableStream` to a `ReadableStreamDefaultReader`:
+
+someReadableStream
+    .pipeThrough(throttle)
+    .getReader()
+```
+
+
+Note that a number value for `contentLength` (in "bytes") must be passed when creating an individual throttle. This should be the total size of data for the request being passed through the throttle, and is used to allocate memory upfront in a single `Uint8Array` typed array, thus preventing expensive GC calls as backpressure builds up. When throttling HTTP requests, `contentLength` can be obtained from the `'content-length'` header, once the headers of the request have arrived:
+
+#### Node.js (Express) example: Obtaining `content-length` from `req` headers:
+```js
+const contentLength = parseInt(req.get('content-length'))
+```
+
+#### Deno example: Obtaining `content-length` from `fetch` headers:
+
+```ts
+const { body, headers } = await fetch(destination);
+
+const contentLength = parseInt(headers.get("content-length"));
 ```
 
 #### Handling Output
@@ -85,8 +116,9 @@ In most cases however, we require more granular control of data output than simp
 
 In these cases, we can use any of the Node.js stream events available such as `data` and `end`:
 
+##### Node.js example: Hooking into the `end` event of a writable stream
 ```js
-someReadableStream
+request
     .pipe(throttle)
     .on('data', chunk => response.write(chunk)
     .on('end', () => {
@@ -94,10 +126,26 @@ someReadableStream
         response.status(200);
         // End the request
         response.end();
-        // Destroy the throttle to release it from the group
-        throttle.destroy();
     });
 ```
+
+##### Deno example: responding to a request with a reader and a status code
+```ts
+import {readerToDenoReader} from 'TBC';
+
+...
+
+await request.respond({
+    status: 200
+    body: readerToDenoReader(reader, contentLength),
+});
+
+// request sent successfully
+```
+
+Note that in the Deno example, a reader may be passed directly to `request.respond()` allowing real-time streaming of the throttled output. However, the Deno [`std`](https://deno.land/std/http/server.ts) server expects a `Deno.Reader` as a `body` (rather than the standard `ReadableStreamDefaultReader`), meaning that conversion is needed between the two.
+
+The `readerToDenoReader` util is exposed for this purpose, and must be provided with both a reference to `ReadableStreamDefaultReader` (`reader`), and the `contentLength` of the request.
 
 ## Configuration Options
 
@@ -156,12 +204,13 @@ bandwidthThrottleGroup.configure({
 })
 ```
 
-## Aborting Requests
+## Aborted Requests
 
-When a client aborts a requests, its important that we also abort the throttle, ensuring the group can re-balance available bandwidth correctly.
+When a client aborts a requests, its important that we also abort the throttle, ensuring the group can re-balance available bandwidth correctly, and backpressure buffer memory is released.
 
+##### Node.js example: Handling aborted requests
 ```js
-const throttle = bandwidthThrottleGroup.createBandwidthThrottle();
+const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
 request.on('aborted', () => {
     // Client aborted request
@@ -169,27 +218,28 @@ request.on('aborted', () => {
     throttle.abort();
 });
 
-someReadableStream
+request
     .pipe(throttle)
-    .on('data', chunk => response.write(chunk)
-    .on('end', () => {
-        // Set the response status of the HTTP request to 200
-        response.status(200);
-        // End the request
-        response.end();
-        // Destroy the throttle to release it from the group
-        throttle.destroy();
-    });
+    .pipe(response);
 ```
 
-## Destroying Requests
+##### Deno example: Handling aborted requests
 
-To prevent memory leaks, individual throttles should be destroyed once all data for a request has been processed, and the request as ended.
+```ts
+const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
-This ensures the throttle instance is fully released from its parent group.
+request
+    .pipeThrough(throttle)
+    .getReader()
 
-Each throttle instance exposes a `.destroy()` method for this purpose:
+try {
+    await request.respond({
+        status: 200
+        body: readerToDenoReader(reader, contentLength),
+    });
+} catch(err) {
+    // request aborted or failed
 
-```js
-throttle.destroy();
+    throttle.abort();
+}
 ```
