@@ -1,3 +1,6 @@
+### 0.2.2
+- Fixes ES Module entry points
+
 ### 0.2.1
 - Fix node.js build
 - Build deno as ES2019 for compatibility
