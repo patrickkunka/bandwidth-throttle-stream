@@ -38,17 +38,19 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 
 ## Deno Installation
 
-In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth-throttle-stream` are available from [deno.land/x](https://deno.land/x):
+In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth_throttle_stream` are available from [deno.land/x](https://deno.land/x):
 
 ```js
-import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth-throttle-stream/lib/mod.ts';
+import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth_throttle_stream/mod.ts';
 ```
 
 The above URL will return the latest release, but it is strongly advised to lock your import to a specific version using the following syntax, where the `x.y.z` semver can be any published version of the library:
 
 ```js
-import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth-throttle-stream@x.y.z/lib/mod.ts';
+import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth_throttle_stream@x.y.z/mod.ts';
 ```
+
+Note that as per Deno convention, the package name is delineated with underscores (`_`).
 
 ## Usage
 
