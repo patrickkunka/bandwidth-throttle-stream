@@ -154,6 +154,7 @@ class BandwidthThrottleGroup {
         this.clockIntervalId = null;
         this.tickIndex = 0;
         this.secondIndex = 0;
+        this.lastTickTime = -1;
     }
 
     /**
