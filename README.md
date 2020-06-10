@@ -272,5 +272,5 @@ The Node.js build process comprises the following steps:
 1. Copy all contents of `lib/` to `src/` (git ignored)
 1. Remove all `.ts` file extensions from modules in `src/` (see `scipts/replace.ts`)
 1. Replace any imports from `src/Platform/*` with a `@Platform` alias (see `scipts/replace.ts`)
-1. Run `tsc` on contents of `src/` with a the `ts-transform-paths` plugin to replace `@Platform` alias with Node.js entry points.
+1. Run `tsc` on contents of `src/` using the [`ts-transform-paths`](https://github.com/zerkalica/zerollup/tree/master/packages/ts-transform-paths) plugin to replace `@Platform` alias with Node.js entry points.
 1. Output compiled, Common.js code to `dist/` (git ignored), and publish `dist/` to NPM.
