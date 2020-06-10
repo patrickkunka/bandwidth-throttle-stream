@@ -4,6 +4,8 @@ import readerToDenoReader, {
     IDenoReader
 } from '../../src/Util/readerToDenoReader';
 
+const MAX_READER_CHUNK_SIZE = 6;
+
 interface ITestContext {
     data: number[];
     mockReader: ReadableStreamDefaultReader<Uint8Array>;
@@ -13,11 +15,19 @@ interface ITestContext {
 interface ITestCase {
     it: string;
     data: number[];
-    reads: Array<null | number[]>;
     pLength: number;
+    maxChunkLength?: number;
+    contentLegnth?: number;
+    reads: Array<null | number[]>;
 }
 
 const testCases: ITestCase[] = [
+    {
+        it: 'it immediately returns `null` for an empty array',
+        data: [],
+        pLength: 6,
+        reads: [null]
+    },
     {
         it: 'pulls from the underlying reader into the provided array',
         data: [0, 1, 2, 3, 4, 5],
@@ -29,6 +39,20 @@ const testCases: ITestCase[] = [
         data: [0, 1, 2, 3, 4, 5],
         pLength: 3,
         reads: [[0, 1, 2], [3, 4, 5], null]
+    },
+    {
+        it:
+            'returns `null` if EOF is encountered before `contentLength` is met',
+        data: [0, 1, 2],
+        contentLegnth: 6,
+        pLength: 6,
+        reads: [[0, 1, 2], null]
+    },
+    {
+        it: 'processes data as it is provided',
+        data: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        pLength: 6,
+        reads: [[0, 1, 2, 3, 4, 5], [6, 7, 8], null, null]
     }
 ];
 
@@ -43,11 +67,19 @@ const createMockData = (values: number[]) => {
 const createMockReader = (
     data: number[]
 ): ReadableStreamDefaultReader<Uint8Array> => {
-    let readIndex = 0;
+    let readStartIndex = 0;
 
     return {
         read: async () => {
-            const value = createMockData(data).subarray(readIndex, data.length);
+            const chunkLength = Math.min(MAX_READER_CHUNK_SIZE, data.length);
+            const readEndIndex = Math.min(
+                readStartIndex + chunkLength,
+                data.length
+            );
+            const value = createMockData(data).subarray(
+                readStartIndex,
+                readEndIndex
+            );
 
             const returnValue =
                 value.length > 0
@@ -60,7 +92,7 @@ const createMockReader = (
                           done: true
                       } as any);
 
-            readIndex += data.length;
+            readStartIndex = readEndIndex;
 
             return returnValue;
         },
@@ -73,20 +105,18 @@ const createMockReader = (
 describe('readerToDenoReader()', () => {
     let context: ITestContext;
 
-    beforeEach(() => {
-        const data = [];
-        const mockReader = createMockReader(data);
-
-        context = {
-            data,
-            mockReader,
-            denoReader: readerToDenoReader(mockReader, 6)
-        };
-    });
-
     testCases.forEach(testCase => {
         it(testCase.it, async () => {
-            context.data.push(...testCase.data);
+            const mockReader = createMockReader(testCase.data);
+
+            context = {
+                data: testCase.data,
+                mockReader,
+                denoReader: readerToDenoReader(
+                    mockReader,
+                    testCase.contentLegnth ?? testCase.data.length
+                )
+            };
 
             const p = new Uint8Array(testCase.pLength);
 
@@ -97,7 +127,7 @@ describe('readerToDenoReader()', () => {
                     assert.equal(result, expected.length);
 
                     assert.deepEqual(
-                        Array.from(p.subarray(0, context.data.length)),
+                        Array.from(p.subarray(0, result!)),
                         expected
                     );
                 } else {

@@ -23,11 +23,15 @@ const readerToDenoReader = (
 
     return {
         read: async (p: Uint8Array) => {
-            // Once all data has been read out of the buffer, return `null` to signal
-            // end of the read
+            // If `0` contentLength has been passed (indicating an empty request), return
+            // `null` immediately
 
-            if (!contentLength || bufferReadStartIndex > contentLength - 1)
-                return null;
+            if (!contentLength) return null;
+
+            // Once all data has been read out of the buffer, return `null` to
+            // signal EOF
+
+            if (bufferReadStartIndex > contentLength - 1) return null;
 
             const {value} = await reader.read();
 
@@ -38,6 +42,12 @@ const readerToDenoReader = (
 
                 bufferEndIndex += value.length;
             }
+
+            // If all buffered data has been written after at least one call to `.read()`
+            // (regardless of content length), return `null` early. This could indicate
+            // a value for `contentLength` that is too large.
+
+            if (bufferReadStartIndex === bufferEndIndex) return null;
 
             // Create a view of the buffer to read out, no larger than `p.length`
 
