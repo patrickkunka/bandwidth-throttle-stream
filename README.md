@@ -40,7 +40,7 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 
 ## Deno Installation
 
-In Deno, all modules are imported from URLs as ES modules. Versioned releases of `bandwidth_throttle_stream` are available from [deno.land/x](https://deno.land/x). Note that as per Deno convention, the package name is delineated with underscores (`_`).
+In Deno, all modules are imported from URLs as ES modules. Versioned [releases](https://github.com/patrickkunka/bandwidth-throttle-stream/releases) of `bandwidth_throttle_stream` are available from [deno.land/x](https://deno.land/x). Note that as per Deno convention, the package name is delineated with underscores (`_`).
 
 ```js
 import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth_throttle_stream/mod.ts';
