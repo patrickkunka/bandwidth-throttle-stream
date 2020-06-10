@@ -264,13 +264,13 @@ try {
 
 This repository contains shared source code for consumption by both Deno (TypeScript ES modules), and Node.js (JavaScript Common.js modules).
 
-Wherever a Deno or Node.js specific API is needed, a common abstraction is created that can be swapped at build time. Platform specific implementations are denoted with either a `.deno.ts` or `.node.ts` file extension. Platform specific entry points to these abstractions reside in the `/lib/Platform` directory.
+Wherever a Deno or Node.js specific API is needed, a common abstraction is created that can be swapped at build time. Platform specific implementations are denoted with either a `.deno.ts` or `.node.ts` file extension. Platform specific entry points to these abstractions reside in the `lib/Platform/` directory.
 
-The source code (contained in the `lib` directory) is ready for direct consumption by Deno is written in ESNext TypeScript, but requires some modifications to produce Node.js compatible NPM distribution code.
+The source code (contained in the `lib/` directory) is ready for direct consumption by Deno is written in ESNext TypeScript, but requires some modifications to produce Node.js compatible NPM distribution code.
 
 The Node.js build process comprises the following steps:
-1. Copy all contents of `/lib` to `/src` (git ignored)
-1. Remove all `.ts` file extensions from modules in `/src` (see `/scipts/replace.ts`)
-1. Replace any imports from `src/Platform/*` with a `@Platform` alias (see `/scipts/replace.ts`)
-1. Run `tsc` on contents of `/src` with a the `ts-transform-paths` plugin to replace `@Platform` alias with Node.js entry points.
-1. Output compiled, Common.js code to `/dist` (git ignored), and publish `/dist` to NPM.
+1. Copy all contents of `lib/` to `src/` (git ignored)
+1. Remove all `.ts` file extensions from modules in `/src/` (see `scipts/replace.ts`)
+1. Replace any imports from `src/Platform/*` with a `@Platform` alias (see `scipts/replace.ts`)
+1. Run `tsc` on contents of `src/` with a the `ts-transform-paths` plugin to replace `@Platform` alias with Node.js entry points.
+1. Output compiled, Common.js code to `dist/` (git ignored), and publish `dist/` to NPM.
