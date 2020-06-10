@@ -89,7 +89,7 @@ someReadableStream
 
 ```
 
-#### Deno example: Piping between a readable stream and a reader:
+##### Deno example: Piping between a readable stream and a reader:
 ```ts
 // Attach a throttle to a group (e.g. in response to an incoming request)
 
@@ -105,12 +105,12 @@ const reader = someReadableStream
 
 Note that a number value for `contentLength` (in "bytes") must be passed when creating an individual throttle. This should be the total size of data for the request being passed through the throttle, and is used to allocate memory upfront in a single `Uint8Array` typed array, thus preventing expensive GC calls as backpressure builds up. When throttling HTTP requests, `contentLength` can be obtained from the `'content-length'` header, once the headers of the request have arrived:
 
-#### Node.js (Express) example: Obtaining `content-length` from `req` headers:
+##### Node.js (Express) example: Obtaining `content-length` from `req` headers:
 ```js
 const contentLength = parseInt(req.get('content-length'))
 ```
 
-#### Deno example: Obtaining `content-length` from `fetch` headers:
+##### Deno example: Obtaining `content-length` from `fetch` headers:
 
 ```ts
 const { body, headers } = await fetch(destination);
