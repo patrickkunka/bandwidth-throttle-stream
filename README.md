@@ -17,10 +17,12 @@ A [Node.js](https://nodejs.org/en/) and [Deno](https://deno.land/) transform str
 - [Usage](#usage)
     - [Creating a Group](#creating-a-group)
     - [Attaching Throttles](#attaching-throttles)
-    - [Handling Output](#handling-output)
+    - [Handling Completion](#handling-completion)
+    - [Converting Between Reader Formats in Deno](#converting-between-reader-formats-in-deno)
 - [Configuration Options](#configuration-options)
 - [Dynamic Configuration](#dynamic-configuration)
 - [Aborted Requests](#aborted-requests)
+- [Repo Structure](#repo-structure)
 
 ## Node.js Installation
 
@@ -38,7 +40,7 @@ import {createBandwidthThrottleGroup} from 'bandwidth-throttle-stream';
 
 ## Deno Installation
 
-In Deno, all libraries are imported from URLs as ES modules. Versioned releases of `bandwidth_throttle_stream` are available from [deno.land/x](https://deno.land/x):
+In Deno, all modules are imported from URLs as ES modules. Versioned releases of `bandwidth_throttle_stream` are available from [deno.land/x](https://deno.land/x). Note that as per Deno convention, the package name is delineated with underscores (`_`).
 
 ```js
 import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth_throttle_stream/mod.ts';
@@ -50,11 +52,9 @@ The above URL will return the latest release, but it is strongly advised to lock
 import {createBandwidthThrottleGroup} from 'https://deno.land/x/bandwidth_throttle_stream@x.y.z/mod.ts';
 ```
 
-Note that as per Deno convention, the package name is delineated with underscores (`_`).
-
 ## Usage
 
-#### Creating a Group
+### Creating a Group
 
 Using the imported `createBandwidthThrottleGroup` factory function, we must firstly create a "bandwidth throttle group" which will be configured with a specific throughput in bytes (B) per second.
 
@@ -68,7 +68,7 @@ const bandwidthThrottleGroup = createBandwidthThrottleGroup({
 
 Typically we would create a single group only for a server running a simulation, which all incoming network requests to be throttled are routed through. However, we could also create multiple groups if we wanted to run multiple simulations with different configurations on a single server.
 
-#### Attaching Throttles
+### Attaching Throttles
 
 Once we've created a group, we can then attach individual pipeable "throttles" to it, as requests come into our server.
 
@@ -97,7 +97,7 @@ const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
 // Throttle the response by piping a `ReadableStream` to a `ReadableStreamDefaultReader`:
 
-someReadableStream
+const reader = someReadableStream
     .pipeThrough(throttle)
     .getReader()
 ```
@@ -118,11 +118,13 @@ const { body, headers } = await fetch(destination);
 const contentLength = parseInt(headers.get("content-length"));
 ```
 
-#### Handling Output
+If no `contentLength` value is available (e.g. the underlying server does not implement a `content-length` header), then it should be set to a value no smaller than the size of largest expected request. To keep memory usage within reason, arbitrarily high values should be avoided.
 
-In most cases however, we require more granular control of data output than simply piping to a writable stream (for example when throttling an HTTP request).
+### Handling Completion
 
-In these cases, we can use any of the Node.js stream events available such as `data` and `end`:
+We may want to perform some specific logic once a request is complete, and all data has been processed through the throttle.
+
+In Node.js, rather than piping directly to a response, we can use the `done` event to manually write data, and the `end` event to manually handled completion.
 
 ##### Node.js example: Hooking into the `end` event of a writable stream
 ```js
@@ -130,28 +132,33 @@ request
     .pipe(throttle)
     .on('data', chunk => response.write(chunk)
     .on('end', () => {
-        // Set the response status of the HTTP request to 200
-        response.status(200);
-        // End the request
         response.end();
+
+        // any custom completion logic here
     });
 ```
 
+In Deno, the call to `request.respond()` returns a promise which resolves once the request is completed and all data has been pulled into the `body` reader.
+
 ##### Deno example: responding to a request with a reader and a status code
 ```ts
-import {readerToDenoReader} from 'https://cdn.pika.dev/bandwidth-throttle-sream@^0.2.0/mod.ts';
+import {readerToDenoReader} from 'https://deno.land/x/bandwidth_throttle_stream@x.y.z/mod.ts';
 
-...
+const reader = request
+    .pipeThrough(throttle)
+    .getReader()
 
 await request.respond({
     status: 200
     body: readerToDenoReader(reader, contentLength),
 });
 
-// request sent successfully
+// any custom completion logic here
 ```
 
-Note that in the Deno example, a reader may be passed directly to `request.respond()` allowing real-time streaming of the throttled output. However, the Deno [`std`](https://deno.land/std/http/server.ts) server expects a `Deno.Reader` as a `body` (rather than the standard `ReadableStreamDefaultReader`), meaning that conversion is needed between the two.
+### Converting Between Reader Formats in Deno
+
+Note that in the Deno example above, a reader may be passed directly to `request.respond()` allowing real-time streaming of the throttled output. However, the Deno [`std`](https://deno.land/std/http/server.ts) server expects a `Deno.Reader` as a `body` (rather than the standard `ReadableStreamDefaultReader`), meaning that conversion is needed between the two.
 
 The `readerToDenoReader` util is exposed for this purpose, and must be provided with both a reference to `ReadableStreamDefaultReader` (`reader`), and the `contentLength` of the request.
 
@@ -237,7 +244,7 @@ request
 ```ts
 const throttle = bandwidthThrottleGroup.createBandwidthThrottle(contentLength);
 
-request
+const reader = request
     .pipeThrough(throttle)
     .getReader()
 
@@ -252,3 +259,18 @@ try {
     throttle.abort();
 }
 ```
+
+## Repo Structure
+
+This repository contains shared source code for consumption by both Deno (TypeScript ES modules), and Node.js (JavaScript Common.js modules).
+
+Wherever a Deno or Node.js specific API is needed, a common abstraction is created that can be swapped at build time. Platform specific implementations are denoted with either a `.deno.ts` or `.node.ts` file extension. Platform specific entry points to these abstractions reside in the `/lib/Platform` directory.
+
+The source code (contained in the `lib` directory) is ready for direct consumption by Deno is written in ESNext TypeScript, but requires some modifications to produce Node.js compatible NPM distribution code.
+
+The Node.js build process comprises the following steps:
+1. Copy all contents of `/lib` to `/src` (git ignored)
+1. Remove all `.ts` file extensions from modules in `/src` (see `/scipts/replace.ts`)
+1. Replace any imports from `src/Platform/*` with a `@Platform` alias (see `/scipts/replace.ts`)
+1. Run `tsc` on contents of `/src` with a the `ts-transform-paths` plugin to replace `@Platform` alias with Node.js entry points.
+1. Output compiled, Common.js code to `/dist` (git ignored), and publish `/dist` to NPM.
