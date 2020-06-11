@@ -22,6 +22,23 @@ interface IConfig {
      */
 
     ticksPerSecond?: number;
+
+    /**
+     * The frequency of samples used to determine the `averageBytesPerSecond` metric.
+     *
+     * @default 1000
+     */
+
+    throughputSampleIntervalMs?: number;
+
+    /**
+     * The maximum number of samples that should contribute to the
+     * `averageBytesPerSecond` metric rolling average.
+     *
+     * @default 4
+     */
+
+    throughputSampleSize?: number;
 }
 
 export default IConfig;

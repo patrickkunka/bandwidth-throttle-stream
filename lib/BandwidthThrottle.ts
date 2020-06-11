@@ -96,9 +96,11 @@ class BandwidthThrottle extends BaseTransformStream {
     /**
      * Extracts a number of bytes from the pending bytes queue and
      * pushes it out to a piped writable stream.
+     *
+     * @returns The number of bytes processed through the throttle
      */
 
-    public process(maxBytesToProcess: number = Infinity): void {
+    public process(maxBytesToProcess: number = Infinity): number {
         const startReadIndex = this.pendingBytesReadIndex;
 
         const endReadIndex = Math.min(
@@ -123,12 +125,16 @@ class BandwidthThrottle extends BaseTransformStream {
             }
         }
 
-        // If there is more data to be processed, stop here
+        // If there is more data to be processed, or there is no pending data but we are
+        // unthrottled, stop here
 
-        if (this.pendingBytesReadIndex < this.pendingBytesCount) return;
+        if (
+            this.pendingBytesReadIndex < this.pendingBytesCount ||
+            !this.config.isThrottled
+        )
+            return bytesToPushLength;
 
-        // If there are no other promises at this point
-        // we can consider the request inactive.
+        // End the request
 
         this.done.resolve();
 
@@ -136,6 +142,8 @@ class BandwidthThrottle extends BaseTransformStream {
         this.destroy();
 
         this.isInFlight = false;
+
+        return bytesToPushLength;
     }
 
     /**
@@ -185,7 +193,25 @@ class BandwidthThrottle extends BaseTransformStream {
      */
 
     private async flush(): Promise<void> {
-        if (this.pendingBytesCount > 0) return this.done;
+        // If an empty request was passed through the throttle, end immediately
+
+        if (this.pendingBytesCount === 0) return;
+
+        if (!this.config.isThrottled) {
+            // If the throttle is unbounded, then all data has been
+            // processed and request can be completed
+
+            this.handleRequestStop(this);
+            this.destroy();
+
+            this.isInFlight = false;
+
+            return;
+        }
+
+        // Else, wait for the processing cycle to compelte the request
+
+        return this.done;
     }
 }
 
