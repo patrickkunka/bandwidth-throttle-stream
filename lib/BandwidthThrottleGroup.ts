@@ -1,6 +1,7 @@
 import BandwidthThrottle from './BandwidthThrottle.ts';
 import Config from './Config.ts';
 import IConfig from './Interfaces/IConfig.ts';
+import IThroughputData from './Interfaces/IThroughputData.ts';
 import {setInterval, Timeout} from './Platform/mod.ts';
 import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAtIndex.ts';
 
@@ -18,12 +19,23 @@ import getPartitionedIntegerPartAtIndex from './Util/getPartitionedIntegerPartAt
 class BandwidthThrottleGroup {
     public config: Readonly<Config> = new Config();
 
+    /**
+     * An optional callback providing the consumer with metrics pertaining to the throttle
+     * group's average throughput and utlization percentage.
+     */
+
+    public onThroughputMetrics:
+        | ((throughputData: IThroughputData) => void)
+        | null = null;
+
     private inFlightRequests: BandwidthThrottle[] = [];
     private bandwidthThrottles: BandwidthThrottle[] = [];
     private clockIntervalId: Timeout | null = null;
+    private pollThroughputIntervalId: Timeout = this.pollThroughput();
     private lastTickTime: number = -1;
     private tickIndex: number = 0;
     private secondIndex: number = 0;
+    private totalBytesProcessed = 0;
 
     private get hasTicked(): boolean {
         return this.lastTickTime > -1;
@@ -80,6 +92,8 @@ class BandwidthThrottleGroup {
      */
 
     public destroy(): void {
+        clearInterval(this.pollThroughputIntervalId);
+
         while (this.bandwidthThrottles.length)
             this.bandwidthThrottles.pop()!.destroy();
     }
@@ -210,7 +224,11 @@ class BandwidthThrottleGroup {
                 this.tickIndex
             );
 
-            bandwidthThrottle.process(bytesPerRequestPerTick * delayMultiplier);
+            const bytesProcessed = bandwidthThrottle.process(
+                bytesPerRequestPerTick * delayMultiplier
+            );
+
+            this.totalBytesProcessed += bytesProcessed;
 
             if (this.inFlightRequests.length < currentInFlightRequestsCount) {
                 i--;
@@ -237,6 +255,48 @@ class BandwidthThrottleGroup {
         this.lastTickTime = this.hasTicked
             ? this.lastTickTime + elapsedTime
             : now;
+    }
+
+    private pollThroughput(): Timeout {
+        const bytesPerSecondSamples: number[] = [];
+        const perSecondMultipler =
+            1000 / this.config.throughputSampleIntervalMs;
+
+        let lastHeapRead = 0;
+
+        return setInterval(() => {
+            const bytesSinceLastSample = Math.max(
+                0,
+                this.totalBytesProcessed - lastHeapRead
+            );
+
+            lastHeapRead = this.totalBytesProcessed;
+
+            bytesPerSecondSamples.push(bytesSinceLastSample);
+
+            if (bytesSinceLastSample === 0) this.totalBytesProcessed = 0;
+
+            if (bytesPerSecondSamples.length > this.config.throughputSampleSize)
+                bytesPerSecondSamples.shift();
+
+            const averageBytesPerSecond =
+                (bytesPerSecondSamples.reduce(
+                    (sum, sample) => sum + sample,
+                    0
+                ) /
+                    bytesPerSecondSamples.length) *
+                perSecondMultipler;
+
+            if (typeof this.onThroughputMetrics === 'function') {
+                this.onThroughputMetrics({
+                    averageBytesPerSecond,
+                    utilization: Math.min(
+                        1,
+                        averageBytesPerSecond / this.config.bytesPerSecond
+                    )
+                });
+            }
+        }, this.config.throughputSampleIntervalMs);
     }
 }
 

@@ -4,6 +4,7 @@ import {Readable, Writable} from 'stream';
 
 import BandwidthThrottle from '../src/BandwidthThrottle';
 import createBandwidthThrottleGroup from '../src/createBandwidthThrottleGroup';
+import IThroughputData from '../src/Interfaces/IThroughputData';
 import Callback from '../src/Types/Callback';
 
 const createChunkOfBytes = (bytes: number): Buffer =>
@@ -175,6 +176,38 @@ describe('BandwidthThrottleGroup', () => {
         });
     });
 
+    it('should invoke `onThroughputMetrics` when a callback is provided', async () => {
+        const metricsStub = stub<[IThroughputData]>();
+
+        const throttleGroup = createBandwidthThrottleGroup({
+            bytesPerSecond: 100
+        });
+
+        throttleGroup.onThroughputMetrics = metricsStub;
+
+        const buffer = createChunkOfBytes(100);
+
+        const throttle = throttleGroup.createBandwidthThrottle(buffer.length);
+
+        await new Promise(resolve => {
+            throttle.on('data', () => void 0).on('end', resolve);
+
+            throttle.write(buffer);
+            throttle.end();
+
+            context.clock.tick(1000);
+        });
+
+        assert(metricsStub.called);
+
+        const [
+            {averageBytesPerSecond, utilization}
+        ] = metricsStub.firstCall.args;
+
+        assert.equal(averageBytesPerSecond, 100);
+        assert.equal(utilization, 1);
+    });
+
     testCases.forEach((testCase, testCaseIndex) => {
         it(`should pass test case ${testCaseIndex}`, async () => {
             const throttleGroup = createBandwidthThrottleGroup({
@@ -240,7 +273,8 @@ describe('BandwidthThrottleGroup', () => {
                             aRequestContext.bytes
                         );
 
-                        aRequestContext.inputStream.push(dataIn);
+                        aRequestContext.inputStream.emit('data', dataIn);
+                        aRequestContext.inputStream.emit('end');
                     }
                 });
 
