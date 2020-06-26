@@ -125,8 +125,10 @@ class BandwidthThrottle extends BaseTransformStream {
             }
         }
 
-        // if data is still being written and processed, or there is no pending data but we are
-        // unthrottled, stop here
+        // Do not complete if:
+        // - additional data is available to be processed,
+        // - or, no additional data is available, but not all data has been written yet
+        // - or, we are unthrottled
 
         if (
             this.pendingBytesReadIndex < this.pendingBytesCount ||

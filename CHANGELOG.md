@@ -1,3 +1,6 @@
+# 1.1.1
+- Fixes an issue where the throttle ended early with incomplete throughput, if the incoming data rate slows such that the outgoing data must wait.
+
 # 1.1.0
 - Fixes issues when passing requests through an unbounded throttle (`bytesPerSecond` = `Infinity`).
 - Adds public `onThroughputMetrics` metrics callback to the `BandwidthThrottleGroup`.
