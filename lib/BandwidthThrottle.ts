@@ -27,7 +27,7 @@ class BandwidthThrottle extends BaseTransformStream {
     private pendingBytesCount = 0;
     private pendingBytesReadIndex = 0;
     private config: Readonly<Config>;
-    private isInFlight: boolean = false;
+    private isDataBeingWritten = false;
     private handleRequestStart: CallbackWithSelf;
     private handleRequestStop: CallbackWithSelf;
     private handleRequestDestroy: CallbackWithSelf;
@@ -125,11 +125,12 @@ class BandwidthThrottle extends BaseTransformStream {
             }
         }
 
-        // If there is more data to be processed, or there is no pending data but we are
+        // if data is still being written and processed, or there is no pending data but we are
         // unthrottled, stop here
 
         if (
             this.pendingBytesReadIndex < this.pendingBytesCount ||
+            this.isDataBeingWritten ||
             !this.config.isThrottled
         )
             return bytesToPushLength;
@@ -140,8 +141,6 @@ class BandwidthThrottle extends BaseTransformStream {
 
         this.handleRequestStop(this);
         this.destroy();
-
-        this.isInFlight = false;
 
         return bytesToPushLength;
     }
@@ -165,14 +164,14 @@ class BandwidthThrottle extends BaseTransformStream {
      */
 
     private transform(chunk: Uint8Array): void {
-        if (!this.isInFlight) {
+        if (!this.isDataBeingWritten) {
             // If this is the first chunk of data to be processed, or
             // if is processing was previously paused due to a lack of
             // input signal that the request is in flight.
 
             this.handleRequestStart(this);
 
-            this.isInFlight = true;
+            this.isDataBeingWritten = true;
         }
 
         this.pendingBytesBuffer.set(chunk, this.pendingBytesCount);
@@ -195,6 +194,8 @@ class BandwidthThrottle extends BaseTransformStream {
     private async flush(): Promise<void> {
         // If an empty request was passed through the throttle, end immediately
 
+        this.isDataBeingWritten = false;
+
         if (this.pendingBytesCount === 0) return;
 
         if (!this.config.isThrottled) {
@@ -203,8 +204,6 @@ class BandwidthThrottle extends BaseTransformStream {
 
             this.handleRequestStop(this);
             this.destroy();
-
-            this.isInFlight = false;
 
             return;
         }
