@@ -1,5 +1,5 @@
 interface IDeferred<T> extends Promise<T> {
-    resolve: (value?: T | PromiseLike<T>) => void;
+    resolve: (value: T | PromiseLike<T>) => void;
     reject: (reason?: any) => void;
 }
 
@@ -16,4 +16,5 @@ const deferred = <T>(): IDeferred<T> => {
     return Object.assign(promise, methods!);
 };
 
-export {deferred as default, IDeferred};
+export {deferred as default};
+export type {IDeferred};

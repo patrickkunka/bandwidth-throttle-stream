@@ -41,8 +41,7 @@ const testCases: ITestCase[] = [
         reads: [[0, 1, 2], [3, 4, 5], null]
     },
     {
-        it:
-            'returns `null` if EOF is encountered before `contentLength` is met',
+        it: 'returns `null` if EOF is encountered before `contentLength` is met',
         data: [0, 1, 2],
         contentLegnth: 6,
         pLength: 6,
@@ -97,7 +96,7 @@ const createMockReader = (
             return returnValue;
         },
         cancel: () => Promise.resolve(),
-        closed: Promise.resolve(),
+        closed: Promise.resolve(void 0),
         releaseLock: () => void 0
     };
 };
@@ -105,7 +104,7 @@ const createMockReader = (
 describe('readerToDenoReader()', () => {
     let context: ITestContext;
 
-    testCases.forEach(testCase => {
+    testCases.forEach((testCase) => {
         it(testCase.it, async () => {
             const mockReader = createMockReader(testCase.data);
 

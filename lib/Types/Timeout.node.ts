@@ -1,3 +1,3 @@
 type Timeout = NodeJS.Timeout;
 
-export default Timeout;
+export type {Timeout as default};
