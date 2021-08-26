@@ -1,3 +1,3 @@
 type Timeout = number;
 
-export default Timeout;
+export type {Timeout as default};
